@@ -51,13 +51,17 @@ func NewServer(store Store) *Server {
 	s.upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
 	return s
 }
 
 func main() {
-	store := NewMemoryStore()
+	store, err := NewSQLStore("main.db")
+	if err != nil {
+		log.Fatal(err)
+	}
 	server := NewServer(store)
 
 	log.Fatal(http.ListenAndServe(":8080", server))

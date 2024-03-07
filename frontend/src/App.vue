@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 const ws = new WebSocket("ws://localhost:8080/ws");
 ws.onopen = () => {
   console.log("connected");
@@ -10,11 +12,12 @@ ws.onclose = () => {
   console.log("disconnected");
 };
 
-let message = "";
+let message = ref("");
 
 const sendMessage = () => {
-  ws.send(message);
-  message = "";
+  ws.send(message.value);
+  console.log("sent: ", message.value);
+  message.value = "";
 };
 </script>
 

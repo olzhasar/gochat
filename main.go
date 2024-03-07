@@ -7,14 +7,29 @@ import (
 )
 
 type Server struct {
+	mux      *http.ServeMux
 	upgrader websocket.Upgrader
+	store    Store
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", s.handleWS)
+	s.mux.ServeHTTP(w, r)
+}
 
-	mux.ServeHTTP(w, r)
+func readMessages(conn *websocket.Conn, store Store) {
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			break
+		}
+
+		err = store.AddMessage(string(message))
+		if err != nil {
+			log.Println(err)
+			break
+		}
+	}
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -24,11 +39,15 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer conn.Close()
+	go readMessages(conn, s.store)
 }
 
-func NewServer() *Server {
-	s := &Server{}
+func NewServer(store Store) *Server {
+	s := &Server{store: store}
+
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("/ws", s.handleWS)
+
 	s.upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -38,7 +57,8 @@ func NewServer() *Server {
 }
 
 func main() {
-	server := NewServer()
+	store := NewMemoryStore()
+	server := NewServer(store)
 
 	log.Fatal(http.ListenAndServe(":8080", server))
 }

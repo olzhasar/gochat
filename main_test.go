@@ -10,7 +10,8 @@ import (
 )
 
 func TestWebsocketConnection(t *testing.T) {
-	server := NewServer()
+	store := NewMemoryStore()
+	server := NewServer(store)
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
@@ -29,7 +30,8 @@ func TestWebsocketConnection(t *testing.T) {
 }
 
 func TestWebsocketMessage(t *testing.T) {
-	server := NewServer()
+	store, _ := NewSQLStore("test.db")
+	server := NewServer(store)
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
@@ -43,5 +45,18 @@ func TestWebsocketMessage(t *testing.T) {
 	message := []byte("hello")
 	if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
 		t.Fatal(err)
+	}
+
+	messages, err := store.GetMessages()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(messages))
+	}
+
+	if messages[0] != string(message) {
+		t.Fatalf("expected message %s, got %s", message, messages[0])
 	}
 }

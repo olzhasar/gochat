@@ -19,3 +19,8 @@
 
 # Go workspace file
 go.work
+
+*.db
+*.db-journal
+*.sqlite3
+*.sqlite3-journal

@@ -4,8 +4,7 @@ import (
 	"testing"
 )
 
-func TestAddMessage(t *testing.T) {
-	store := NewMemoryStore()
+func runStoreTests(t *testing.T, store Store) {
 	err := store.AddMessage("hello")
 	if err != nil {
 		t.Fatal(err)
@@ -23,4 +22,17 @@ func TestAddMessage(t *testing.T) {
 	if messages[0] != "hello" {
 		t.Fatalf("expected message 'hello', got %s", messages[0])
 	}
+}
+
+func TestMemoryStore(t *testing.T) {
+	store := NewMemoryStore()
+	runStoreTests(t, store)
+}
+
+func TestSQLStore(t *testing.T) {
+	store, err := NewSQLStore(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runStoreTests(t, store)
 }

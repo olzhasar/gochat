@@ -37,6 +37,28 @@ func TestWebsocketConnection(t *testing.T) {
 	}
 }
 
+func TestSetName(t *testing.T) {
+	server := NewServer()
+	go server.listen()
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	conn := makeConnection(ts)
+	defer conn.Close()
+
+	name := "test"
+	if err := conn.WriteMessage(websocket.TextMessage, []byte(name)); err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	if server.clients[0].name != name {
+		t.Fatalf("expected name %s, got %s", name, server.clients[0].name)
+	}
+}
+
 func TestWebsocketMessage(t *testing.T) {
 	server := NewServer()
 	go server.listen()
@@ -49,6 +71,8 @@ func TestWebsocketMessage(t *testing.T) {
 	defer conn1.Close()
 	defer conn2.Close()
 
+	conn1.WriteMessage(websocket.TextMessage, []byte("test"))
+
 	message := []byte("hello")
 	if err := conn1.WriteMessage(websocket.TextMessage, message); err != nil {
 		t.Fatal(err)
@@ -56,13 +80,15 @@ func TestWebsocketMessage(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
+	expected := "test|hello"
+
 	_, received, err := conn2.ReadMessage()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(received) != string(message) {
-		t.Fatalf("expected message %s, got %s", message, received)
+	if string(received) != expected {
+		t.Fatalf("expected message %s, got %s", expected, received)
 	}
 }
 

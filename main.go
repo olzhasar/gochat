@@ -42,9 +42,9 @@ func NewServer() *Server {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	s.message = make(chan Message)
 	s.register = make(chan *Client)
 	s.unregister = make(chan *Client)
+	s.message = make(chan Message)
 
 	return s
 }
@@ -53,10 +53,15 @@ func (s *Server) listen() {
 	for {
 		select {
 		case message := <-s.message:
+			if message.author.name == "" {
+				message.author.name = string(message.content)
+				continue
+			}
+
+			msg := message.author.name + "|" + string(message.content)
+
 			for _, client := range s.clients {
-				if client != message.author {
-					client.write(message.content)
-				}
+				client.write([]byte(msg))
 			}
 		case client := <-s.register:
 			s.clients = append(s.clients, client)

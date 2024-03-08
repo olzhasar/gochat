@@ -5,13 +5,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 func TestWebsocketConnection(t *testing.T) {
+	registry := NewMemoryRegistry()
 	store := NewMemoryStore()
-	server := NewServer(store)
+	server := NewServer(store, registry)
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
@@ -27,11 +29,16 @@ func TestWebsocketConnection(t *testing.T) {
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		t.Fatalf("expected status code %d, got %d", http.StatusSwitchingProtocols, resp.StatusCode)
 	}
+
+	if len(registry.all()) != 1 {
+		t.Fatalf("expected 1 client, got %d", len(registry.clients))
+	}
 }
 
 func TestWebsocketMessage(t *testing.T) {
-	store, _ := NewSQLStore("test.db")
-	server := NewServer(store)
+	store := NewMemoryStore()
+	registry := NewMemoryRegistry()
+	server := NewServer(store, registry)
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
@@ -46,6 +53,8 @@ func TestWebsocketMessage(t *testing.T) {
 	if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(50 * time.Millisecond)
 
 	messages, err := store.GetMessages()
 	if err != nil {

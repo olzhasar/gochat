@@ -61,7 +61,9 @@ func (s *Server) listen() {
 			msg := message.author.name + "|" + string(message.content)
 
 			for _, client := range s.clients {
-				client.write([]byte(msg))
+				if client != message.author {
+					client.write([]byte(msg))
+				}
 			}
 		case client := <-s.register:
 			s.clients = append(s.clients, client)

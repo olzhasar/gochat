@@ -12,6 +12,8 @@ import (
 
 func TestWebsocketConnection(t *testing.T) {
 	server := NewServer()
+	go server.listen()
+
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
@@ -37,6 +39,8 @@ func TestWebsocketConnection(t *testing.T) {
 
 func TestWebsocketMessage(t *testing.T) {
 	server := NewServer()
+	go server.listen()
+
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 

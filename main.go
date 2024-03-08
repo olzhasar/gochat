@@ -7,6 +7,7 @@ import (
 )
 
 type Client struct {
+	name string
 	conn *websocket.Conn
 }
 
@@ -14,80 +15,71 @@ func (c *Client) write(message []byte) {
 	c.conn.WriteMessage(websocket.TextMessage, message)
 }
 
-type Registry interface {
-	all() []*Client
-	add(client *Client)
-}
-
 func NewClient(conn *websocket.Conn) *Client {
 	return &Client{conn: conn}
-}
-
-type MemoryRegistry struct {
-	clients []*Client
-}
-
-func (m *MemoryRegistry) add(client *Client) {
-	m.clients = append(m.clients, client)
-}
-
-func (m *MemoryRegistry) all() []*Client {
-	return m.clients
-}
-
-func NewMemoryRegistry() *MemoryRegistry {
-	return &MemoryRegistry{}
 }
 
 type Server struct {
 	mux      *http.ServeMux
 	upgrader websocket.Upgrader
-	store    Store
-	registry Registry
+	clients  []*Client
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
+func (s *Server) register(client *Client) {
+	s.clients = append(s.clients, client)
 }
 
-func readMessages(conn *websocket.Conn, store Store, registry Registry) {
-	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
-		err = store.AddMessage(string(message))
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
-		for _, client := range registry.all() {
-			go client.write(message)
+func (s *Server) unregister(client *Client) {
+	for i, c := range s.clients {
+		if c == client {
+			s.clients = append(s.clients[:i], s.clients[i+1:]...)
+			return
 		}
 	}
 }
 
-func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		log.Println("Failed to upgrade connection")
 		log.Println(err)
 		return
 	}
 
-	client := NewClient(conn)
-	s.registry.add(client)
+	log.Println("client connected")
 
-	go readMessages(conn, s.store, s.registry)
+	client := NewClient(conn)
+	s.register(client)
+
+	go s.readMessages(client)
 }
 
-func NewServer(store Store, registry Registry) *Server {
-	s := &Server{store: store, registry: registry}
+func (s *Server) readMessages(client *Client) {
+	for {
+		_, message, err := client.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err) {
+				log.Println("client disconnected")
+				s.unregister(client)
+				return
+			}
+			log.Println("Unexpected error")
+			log.Println(err)
+			continue
+		}
 
-	s.mux = http.NewServeMux()
-	s.mux.HandleFunc("/ws", s.handleWS)
+		log.Println("message received: ", string(message))
+
+		for _, c := range s.clients {
+			if c != client {
+				c.write(message)
+			}
+		}
+	}
+}
+
+func NewServer() *Server {
+	s := &Server{}
 
 	s.upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -99,14 +91,6 @@ func NewServer(store Store, registry Registry) *Server {
 }
 
 func main() {
-	store, err := NewSQLStore("main.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	registry := NewMemoryRegistry()
-
-	server := NewServer(store, registry)
-
+	server := NewServer()
 	log.Fatal(http.ListenAndServe(":8080", server))
 }

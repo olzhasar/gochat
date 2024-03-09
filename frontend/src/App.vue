@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const apiURL = import.meta.env.VITE_API_URL as string;
+
 import { Ref, ref } from "vue";
 
 interface Message {
@@ -11,7 +13,7 @@ let messagePrompt = ref("");
 let name = ref("");
 let nameSet = ref(false);
 
-const ws = new WebSocket("ws://localhost:8080/ws");
+const ws = new WebSocket(apiURL);
 
 const scrollToBottom = () => {
   const messagesDiv = document.getElementById("messageList") as HTMLElement;

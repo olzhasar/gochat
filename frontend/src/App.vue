@@ -15,10 +15,7 @@ let nameSet = ref(false);
 
 const scrollToBottom = () => {
   const messagesDiv = document.getElementById("messageList") as HTMLElement;
-  window.setTimeout(
-    () => (messagesDiv.scrollTop = messagesDiv.scrollHeight),
-    0,
-  );
+  setTimeout(() => (messagesDiv.scrollTop = messagesDiv.scrollHeight), 0);
 };
 
 let ws: WebSocket;
@@ -84,7 +81,7 @@ const setName = () => {
 
 const focusMessageInput = () => {
   const element = document.getElementById("messageInput") as HTMLInputElement;
-  window.setTimeout(() => element.focus(), 0);
+  setTimeout(() => element.focus(), 0);
 };
 </script>
 

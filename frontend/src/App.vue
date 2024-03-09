@@ -17,7 +17,7 @@ const ws = new WebSocket(apiURL);
 
 const scrollToBottom = () => {
   const messagesDiv = document.getElementById("messageList") as HTMLElement;
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  window.setTimeout(() => messagesDiv.scrollTop = messagesDiv.scrollHeight, 0);
 };
 
 ws.onopen = () => {
@@ -27,7 +27,7 @@ ws.onmessage = (event) => {
   const rawMessage = event.data as string;
   const [author, content] = rawMessage.split("|");
   messages.value.push({ content: content, author: author });
-  window.setTimeout(scrollToBottom, 0);
+  scrollToBottom();
 };
 ws.onclose = () => {
   console.log("disconnected");
@@ -41,13 +41,13 @@ const sendMessage = () => {
   ws.send(messagePrompt.value);
   messages.value.push({ content: messagePrompt.value, author: null });
   messagePrompt.value = "";
-  window.setTimeout(scrollToBottom, 0);
+  scrollToBottom();
 };
 
 const setName = () => {
   ws.send(name.value);
   nameSet.value = true;
-  window.setTimeout(scrollToBottom, 0);
+  scrollToBottom();
 
   const element = document.getElementById("messageInput") as HTMLInputElement;
   window.setTimeout(() => element.focus(), 0);
@@ -96,6 +96,7 @@ const setName = () => {
 	class="w-full input input-bordered"
 	type="text"
 	placeholder="Type a message"
+	@focus="scrollToBottom"
       />
 
       <button class="btn btn-square btn-secondary" type="submit">

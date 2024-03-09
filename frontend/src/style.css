@@ -13,3 +13,21 @@
       scrollbar-width: none; /* Firefox */
     }
 }
+
+* { touch-action: manipulation; }
+
+html {
+  height: 100svh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
+}
+
+body {
+  height: 100svh;
+  width: 100vw;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  position: fixed;
+}

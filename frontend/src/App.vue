@@ -7,7 +7,7 @@ interface Message {
 }
 
 let messages: Ref<Message[]> = ref([]);
-let messageInput = ref("");
+let messagePrompt = ref("");
 let name = ref("");
 let nameSet = ref(false);
 
@@ -32,19 +32,23 @@ ws.onclose = () => {
 };
 
 const sendMessage = () => {
-  if (messageInput.value === "" || messageInput.value === null) {
+  if (messagePrompt.value === "" || messagePrompt.value === null) {
     return;
   }
 
-  ws.send(messageInput.value);
-  messages.value.push({ content: messageInput.value, author: null });
-  messageInput.value = "";
+  ws.send(messagePrompt.value);
+  messages.value.push({ content: messagePrompt.value, author: null });
+  messagePrompt.value = "";
   scrollToBottom();
 };
 
 const setName = () => {
   ws.send(name.value);
   nameSet.value = true;
+  scrollToBottom();
+
+  const element = document.getElementById("messageInput") as HTMLInputElement;
+  window.setTimeout(() => element.focus(), 0);
 };
 
 </script>
@@ -54,7 +58,7 @@ const setName = () => {
     <h1 class="my-4 text-2xl text-center">Chat</h1>
 
     <form v-if="!nameSet" class="space-y-2" @submit="(event) => {event.preventDefault(); setName()}">
-      <input v-model="name" class="w-full input input-bordered" type="text" placeholder="Enter your name" />
+      <input tabindex="0" v-model="name" class="w-full input input-bordered" type="text" placeholder="Enter your name" autofocus />
       <button class="btn btn-primary btn-block">Start chatting</button>
     </form>
 
@@ -80,10 +84,13 @@ const setName = () => {
     }
       "
       class="my-4"
+      id="messageForm"
+      v-show="nameSet"
     >
       <input
-	v-model="messageInput"
-	v-if="nameSet"
+	tabindex="1"
+	id="messageInput"
+	v-model="messagePrompt"
 	class="w-full input input-bordered"
 	type="text"
 	placeholder="Type a message"

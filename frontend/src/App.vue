@@ -27,7 +27,7 @@ ws.onmessage = (event) => {
   const rawMessage = event.data as string;
   const [author, content] = rawMessage.split("|");
   messages.value.push({ content: content, author: author });
-  scrollToBottom();
+  window.setTimeout(scrollToBottom, 0);
 };
 ws.onclose = () => {
   console.log("disconnected");
@@ -41,13 +41,13 @@ const sendMessage = () => {
   ws.send(messagePrompt.value);
   messages.value.push({ content: messagePrompt.value, author: null });
   messagePrompt.value = "";
-  scrollToBottom();
+  window.setTimeout(scrollToBottom, 0);
 };
 
 const setName = () => {
   ws.send(name.value);
   nameSet.value = true;
-  scrollToBottom();
+  window.setTimeout(scrollToBottom, 0);
 
   const element = document.getElementById("messageInput") as HTMLInputElement;
   window.setTimeout(() => element.focus(), 0);
@@ -56,7 +56,7 @@ const setName = () => {
 </script>
 
 <template>
-  <div class="flex overflow-hidden flex-col mx-auto max-w-md h-screen">
+  <div class="flex overflow-hidden flex-col p-2 mx-auto max-w-md h-screen md:p-0">
     <h1 class="my-4 text-2xl text-center">Chat</h1>
 
     <form v-if="!nameSet" class="space-y-2" @submit="(event) => {event.preventDefault(); setName()}">
@@ -64,7 +64,7 @@ const setName = () => {
       <button class="btn btn-primary btn-block">Start chatting</button>
     </form>
 
-    <div v-show="nameSet" id="messageList" class="overflow-y-scroll flex-grow pr-2 my-4 space-y-4 no-scrollbar">
+    <div v-show="nameSet" id="messageList" class="overflow-y-scroll flex-grow pr-2 my-4 space-y-2 no-scrollbar">
       <div v-for="msg in messages">
 	<div v-if="msg.author != null" class="chat chat-start">
 	  <div class="chat-header">{{ msg.author }}</div>

@@ -13,6 +13,11 @@ let nameSet = ref(false);
 
 const ws = new WebSocket("ws://localhost:8080/ws");
 
+const scrollToBottom = () => {
+  const messagesDiv = document.getElementById("messageList") as HTMLElement;
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+};
+
 ws.onopen = () => {
   console.log("connected");
 };
@@ -26,18 +31,12 @@ ws.onclose = () => {
   console.log("disconnected");
 };
 
-const scrollToBottom = () => {
-  const messagesDiv = document.getElementById("messageList") as HTMLElement;
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-};
-
 const sendMessage = () => {
   if (messageInput.value === "" || messageInput.value === null) {
     return;
   }
 
   ws.send(messageInput.value);
-  console.log("sent: ", messageInput.value);
   messages.value.push({ content: messageInput.value, author: null });
   messageInput.value = "";
   scrollToBottom();
@@ -51,22 +50,27 @@ const setName = () => {
 </script>
 
 <template>
-  <div class="overflow-hidden mx-auto max-w-md h-screen">
+  <div class="flex overflow-hidden flex-col mx-auto max-w-md h-screen">
     <h1 class="my-4 text-2xl text-center">Chat</h1>
 
     <form v-if="!nameSet" class="space-y-2" @submit="(event) => {event.preventDefault(); setName()}">
-      <input v-model="name" class="p-2 w-full rounded-md border shadow" type="text" placeholder="Enter your name" />
-      <button class="block py-2 px-4 w-full text-white bg-green-600 rounded-md border">Start chatting</button>
+      <input v-model="name" class="w-full input input-bordered" type="text" placeholder="Enter your name" />
+      <button class="btn btn-primary btn-block">Start chatting</button>
     </form>
 
-    <div v-show="messages.length" id="messageList" class="overflow-y-scroll pr-2 my-4 space-y-4 text-slate-600 h-[calc(100vh-10rem)]">
-      <div v-for="msg in messages" class="py-1">
-	<div v-if="msg.author !== null" class="flex justify-start">
-	  <span v-if="msg.author !== null" class="py-2 px-4 bg-white rounded-md border shadow">{{ msg.author }}: {{ msg.content }}</span>
+    <div v-show="nameSet" id="messageList" class="overflow-y-scroll flex-grow pr-2 my-4 space-y-4">
+      <div v-for="msg in messages">
+	<div v-if="msg.author != null" class="chat chat-start">
+	  <div class="chat-header">{{ msg.author }}</div>
+	  <div class="chat-bubble chat-bubble-primary">
+	    {{ msg.content }}
+	  </div>
 	</div>
-	<div v-else class="flex justify-end">
-	  <span class="py-2 px-4 bg-blue-200 rounded-md border shadow">{{ msg.content }}</span>
+
+	<div v-else class="chat chat-end">
+	  <div class="chat-bubble chat-bubble-secondary">{{ msg.content }}</div>
 	</div>
+
       </div>
     </div>
 
@@ -74,11 +78,13 @@ const setName = () => {
       event.preventDefault();
       sendMessage();
     }
-      ">
+      "
+      class="my-4"
+    >
       <input
 	v-model="messageInput"
 	v-if="nameSet"
-	class="p-2 w-full rounded-md border shadow"
+	class="w-full input input-bordered"
 	type="text"
 	placeholder="Type a message"
       />

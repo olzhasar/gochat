@@ -58,7 +58,7 @@ const setName = () => {
       <button class="btn btn-primary btn-block">Start chatting</button>
     </form>
 
-    <div v-show="nameSet" id="messageList" class="overflow-y-scroll flex-grow pr-2 my-4 space-y-4">
+    <div v-show="nameSet" id="messageList" class="overflow-y-scroll flex-grow pr-2 my-4 space-y-4 no-scrollbar">
       <div v-for="msg in messages">
 	<div v-if="msg.author != null" class="chat chat-start">
 	  <div class="chat-header">{{ msg.author }}</div>

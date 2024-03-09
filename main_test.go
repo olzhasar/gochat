@@ -54,8 +54,8 @@ func TestSetName(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if server.clients[0].name != name {
-		t.Fatalf("expected name %s, got %s", name, server.clients[0].name)
+	if server.clients[0].Name != name {
+		t.Fatalf("expected name %s, got %s", name, server.clients[0].Name)
 	}
 }
 

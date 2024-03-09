@@ -8,22 +8,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	name string
-	conn *websocket.Conn
-}
-
 type Message struct {
 	author  *Client
 	content []byte
-}
-
-func (c *Client) write(message []byte) {
-	c.conn.WriteMessage(websocket.TextMessage, message)
-}
-
-func NewClient(conn *websocket.Conn) *Client {
-	return &Client{conn: conn}
 }
 
 type Server struct {
@@ -51,31 +38,47 @@ func NewServer() *Server {
 	return s
 }
 
+func composeMessage(author *Client, content []byte) string {
+	return author.Name + "|" + string(content)
+}
+
+func (s *Server) registerClient(client *Client) {
+	s.clients = append(s.clients, client)
+}
+
+func (s *Server) unregisterClient(client *Client) {
+	for i, c := range s.clients {
+		if c == client {
+			s.clients = append(s.clients[:i], s.clients[i+1:]...)
+			break
+		}
+	}
+}
+
+func (s *Server) handleMessage(message Message) {
+	if message.author.Name == "" {
+		message.author.setName(string(message.content))
+		return
+	}
+
+	msg := composeMessage(message.author, message.content)
+
+	for _, client := range s.clients {
+		if client != message.author {
+			client.write([]byte(msg))
+		}
+	}
+}
+
 func (s *Server) listen() {
 	for {
 		select {
 		case message := <-s.message:
-			if message.author.name == "" {
-				message.author.name = string(message.content)
-				continue
-			}
-
-			msg := message.author.name + "|" + string(message.content)
-
-			for _, client := range s.clients {
-				if client != message.author {
-					client.write([]byte(msg))
-				}
-			}
+			s.handleMessage(message)
 		case client := <-s.register:
-			s.clients = append(s.clients, client)
+			s.registerClient(client)
 		case client := <-s.unregister:
-			for i, c := range s.clients {
-				if c == client {
-					s.clients = append(s.clients[:i], s.clients[i+1:]...)
-					break
-				}
-			}
+			s.unregisterClient(client)
 		}
 	}
 }
@@ -93,16 +96,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	client := NewClient(conn)
 	s.register <- client
 
-	go readMessages(s, client)
+	go s.readMessages(client)
 }
 
-func readMessages(server *Server, client *Client) {
+func (s *Server) readMessages(client *Client) {
 	for {
 		_, message, err := client.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err) {
 				log.Println("client disconnected")
-				server.unregister <- client
+				s.unregister <- client
 				return
 			}
 			log.Println("Unexpected error")
@@ -111,7 +114,7 @@ func readMessages(server *Server, client *Client) {
 		}
 
 		log.Println("message received: ", string(message))
-		server.message <- Message{author: client, content: message}
+		s.message <- Message{author: client, content: message}
 	}
 }
 

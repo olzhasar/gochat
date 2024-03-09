@@ -24,3 +24,5 @@ go.work
 *.db-journal
 *.sqlite3
 *.sqlite3-journal
+
+gochat

@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/gorilla/websocket"
 )
 
 type Client struct {
@@ -114,8 +116,14 @@ func readMessages(server *Server, client *Client) {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	server := NewServer()
 	go server.listen()
 
-	log.Fatal(http.ListenAndServe(":8080", server))
+	log.Println("Starting server on port", port)
+	log.Fatal(http.ListenAndServe(":"+port, server))
 }

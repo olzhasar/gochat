@@ -71,6 +71,7 @@ const sendMessage = () => {
   messages.value.push({ content: messagePrompt.value, author: null });
   messagePrompt.value = "";
   scrollToBottom();
+  focusMessageInput();
 };
 
 const setName = () => {
@@ -78,6 +79,10 @@ const setName = () => {
   nameSet.value = true;
   scrollToBottom();
 
+  focusMessageInput();
+};
+
+const focusMessageInput = () => {
   const element = document.getElementById("messageInput") as HTMLInputElement;
   window.setTimeout(() => element.focus(), 0);
 };

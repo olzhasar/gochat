@@ -177,6 +177,46 @@ func TestLeaveMessage(t *testing.T) {
 	checkReceivedMessage(t, conn1, "3leaver|")
 }
 
+func TestGetRoom(t *testing.T) {
+	hub := NewHub()
+	hub.run()
+
+	room := hub.CreateRoom()
+
+	server := NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/room/" + room.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+}
+
+func TestGetUnexistingRoom(t *testing.T) {
+	hub := NewHub()
+	hub.run()
+
+	server := NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/room/123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status code %d, got %d", http.StatusNotFound, resp.StatusCode)
+	}
+}
+
 func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	dialer := websocket.Dialer{}
 	url := "ws" + ts.URL[4:] + "/ws/" + roomId

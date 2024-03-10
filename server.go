@@ -26,6 +26,26 @@ func handleRoomCreate(hub *Hub) http.HandlerFunc {
 	}
 }
 
+func handleRoomGet(hub *Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		roomID := r.PathValue("room")
+		if roomID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		room := hub.GetRoom(roomID)
+		if room == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func handleWS(upgrader websocket.Upgrader, hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		roomID := r.PathValue("room")
@@ -68,6 +88,7 @@ func NewServer(hub *Hub) *Server {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /room", handleRoomCreate(hub))
+	mux.HandleFunc("GET /room/{room}", handleRoomGet(hub))
 	mux.HandleFunc("GET /ws/{room}", handleWS(upgrader, hub))
 
 	return &Server{upgrader: upgrader, hub: hub, mux: mux}

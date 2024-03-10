@@ -246,6 +246,7 @@ const notifyStopTyping = () => {
           class="w-full input input-bordered"
           type="text"
           placeholder="Type a message"
+          autocomplete="off"
           @focus="scrollToBottom"
           @input="notifyTyping"
           @blur="notifyStopTyping"

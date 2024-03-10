@@ -53,7 +53,7 @@ const checkRoomExists = async (): Promise<boolean> => {
 
 let ws: WebSocket;
 
-const connect = async (): Promise<WebSocket> => {
+const connect = async () => {
   const roomExists = await checkRoomExists();
 
   if (!roomExists) {
@@ -77,19 +77,17 @@ const connect = async (): Promise<WebSocket> => {
     console.log("disconnected");
     connected.value = false;
     setTimeout(() => {
-      ws = connect();
+      connect();
     }, 2000);
   };
   ws.onerror = () => {
     console.log("error encountered. closing");
     ws.close();
   };
-
-  return ws;
 };
 
 onMounted(() => {
-  ws = connect();
+  connect();
 });
 
 const parseMessage = (rawMessage: string): Message => {

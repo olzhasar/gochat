@@ -12,8 +12,10 @@ func main() {
 		port = "8080"
 	}
 
-	server := NewServer()
-	go server.listen()
+	hub := NewHub()
+	hub.run()
+
+	server := NewServer(hub)
 
 	log.Println("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(":"+port, server))

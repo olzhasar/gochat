@@ -11,8 +11,9 @@ import (
 )
 
 func TestWebsocketConnection(t *testing.T) {
-	server := NewServer()
-	go server.listen()
+	hub := NewHub()
+	hub.run()
+	server := NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -32,14 +33,16 @@ func TestWebsocketConnection(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if len(server.clients) != 1 {
-		t.Fatalf("expected 1 client, got %d", len(server.clients))
+	if len(hub.clients) != 1 {
+		t.Fatalf("expected 1 client, got %d", len(hub.clients))
 	}
 }
 
 func TestSetName(t *testing.T) {
-	server := NewServer()
-	go server.listen()
+	hub := NewHub()
+	hub.run()
+
+	server := NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -54,14 +57,16 @@ func TestSetName(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if server.clients[0].Name != name {
-		t.Fatalf("expected name %s, got %s", name, server.clients[0].Name)
+	if hub.clients[0].name != name {
+		t.Fatalf("expected name %s, got %s", name, hub.clients[0].name)
 	}
 }
 
 func TestWebsocketMessage(t *testing.T) {
-	server := NewServer()
-	go server.listen()
+	hub := NewHub()
+	hub.run()
+
+	server := NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()

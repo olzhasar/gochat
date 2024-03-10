@@ -29,6 +29,8 @@ let messages: Ref<Message[]> = ref([]);
 let messagePrompt = ref("");
 let name = ref("");
 let nameSet = ref(false);
+let typing = ref(false);
+let personTyping = ref("");
 
 const scrollToBottom = () => {
   const messagesDiv = document.getElementById("messageList") as HTMLElement;
@@ -69,11 +71,40 @@ onMounted(() => {
   ws = connect();
 });
 
-const receiveMessage = (event: MessageEvent) => {
-  const rawMessage = event.data as string;
+const parseMessage = (rawMessage: string): Message => {
   const msgType = parseInt(rawMessage.charAt(0));
   const [author, content] = rawMessage.slice(1).split("|");
-  messages.value.push({ msgType: msgType, content: content, author: author });
+  return { msgType: msgType, content: content, author: author };
+};
+
+const receiveMessage = (event: MessageEvent) => {
+  const msg = parseMessage(event.data);
+
+  if (msg.msgType === MessageType.TYPING) {
+    const author = msg.author as string;
+    personTyping.value = author;
+    scrollToBottom();
+    return;
+  }
+
+  if (
+    msg.msgType === MessageType.STOP_TYPING &&
+    personTyping.value === msg.author
+  ) {
+    console.log("stopped typing: " + msg.author);
+    personTyping.value = "";
+    return;
+  }
+
+  if (msg.msgType === MessageType.LEAVE && msg.author === personTyping.value) {
+    personTyping.value = "";
+  }
+
+  if (msg.author !== null && msg.author === personTyping.value) {
+    personTyping.value = "";
+  }
+
+  messages.value.push(msg);
   scrollToBottom();
 };
 
@@ -94,6 +125,7 @@ const sendMessage = () => {
     author: null,
   });
   messagePrompt.value = "";
+  typing.value = false;
   scrollToBottom();
   focusMessageInput();
 };
@@ -109,6 +141,20 @@ const setName = () => {
 const focusMessageInput = () => {
   const element = document.getElementById("messageInput") as HTMLInputElement;
   setTimeout(() => element.focus(), 0);
+};
+
+const notifyTyping = () => {
+  if (!typing.value) {
+    typing.value = true;
+    sendToWS("", MessageType.TYPING);
+  }
+};
+
+const notifyStopTyping = () => {
+  if (typing.value) {
+    typing.value = false;
+    sendToWS("", MessageType.STOP_TYPING);
+  }
 };
 </script>
 
@@ -170,6 +216,12 @@ const focusMessageInput = () => {
           {{ msg.author }} has disconnected
         </p>
       </div>
+
+      <div v-if="personTyping" class="chat chat-start">
+        <div class="opacity-60 chat-footer">
+          {{ personTyping }} is typing...
+        </div>
+      </div>
     </div>
 
     <form
@@ -191,6 +243,8 @@ const focusMessageInput = () => {
         type="text"
         placeholder="Type a message"
         @focus="scrollToBottom"
+        @input="notifyTyping"
+        @blur="notifyStopTyping"
       />
 
       <button class="btn btn-square btn-secondary" type="submit">

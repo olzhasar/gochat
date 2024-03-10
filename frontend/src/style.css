@@ -3,28 +3,28 @@
 @tailwind utilities;
 
 @layer utilities {
-    /* Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-    .no-scrollbar {
-      -ms-overflow-style: none; /* IE and Edge */
-      scrollbar-width: none; /* Firefox */
-    }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
 }
 
-* { touch-action: manipulation; }
+* {
+  touch-action: manipulation;
+}
 
 html {
-  height: 100svh;
   overflow: hidden;
   overscroll-behavior: none;
   position: fixed;
 }
 
 body {
-  height: 100svh;
   width: 100vw;
   overflow: hidden;
   overscroll-behavior: none;

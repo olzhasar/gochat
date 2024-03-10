@@ -182,7 +182,7 @@ const share = async () => {
 <template>
   <main
     v-if="connected"
-    class="flex overflow-hidden flex-col px-2 pb-2 mx-auto max-w-md h-screen md:p-0"
+    class="flex overflow-hidden flex-col px-2 pb-2 mx-auto max-w-md h-[calc(100dvh)] md:p-0"
   >
     <div class="flex navbar flex-0">
       <div class="flex-0">

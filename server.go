@@ -17,8 +17,12 @@ func handleRoomCreate(hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		room := hub.CreateRoom()
 
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(room.ID))
+
+		log.Println("Created room", room.ID)
 	}
 }
 
@@ -57,6 +61,12 @@ func NewServer(hub *Hub) *Server {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("OPTIONS /*", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("POST /room", handleRoomCreate(hub))
 	mux.HandleFunc("GET /room/{room}", handleWS(upgrader, hub))
 

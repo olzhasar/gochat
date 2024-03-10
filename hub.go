@@ -125,8 +125,10 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 		}
 	}
 
-	leaveMsg := NewMessage(client, room, MESSAGE_TYPE_LEAVE, nil)
-	go h.broadcast(leaveMsg)
+	if client.name != "" {
+		leaveMsg := NewMessage(client, room, MESSAGE_TYPE_LEAVE, nil)
+		go h.broadcast(leaveMsg)
+	}
 
 	client.close()
 
@@ -177,6 +179,7 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 		msgType, content, err := parseMessageData(message)
 		if err != nil {
 			log.Println("Invalid message received")
+			h.unregister(client, room)
 			continue
 		}
 
@@ -188,6 +191,7 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 
 		if client.name == "" && msg.msgType != MESSAGE_TYPE_NAME {
 			log.Println("Client name not set")
+			h.unregister(client, room)
 			continue
 		}
 

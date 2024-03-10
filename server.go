@@ -13,6 +13,15 @@ type Server struct {
 	hub      *Hub
 }
 
+func handleRoomCreate(hub *Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		room := hub.CreateRoom()
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(room.ID))
+	}
+}
+
 func handleWS(upgrader websocket.Upgrader, hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -34,7 +43,8 @@ func NewServer(hub *Hub) *Server {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleWS(upgrader, hub))
+	mux.HandleFunc("GET /", handleWS(upgrader, hub))
+	mux.HandleFunc("POST /room", handleRoomCreate(hub))
 
 	return &Server{upgrader: upgrader, hub: hub, mux: mux}
 }

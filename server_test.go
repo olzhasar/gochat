@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +10,43 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func TestCreateRoom(t *testing.T) {
+	hub := NewHub()
+	hub.run()
+
+	server := NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	url := ts.URL + "/room"
+
+	resp, err := http.Post(url, "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected status code %d, got %d", http.StatusCreated, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roomId := string(body)
+
+	if roomId == "" {
+		t.Fatal("expected non-empty room id")
+	}
+
+	room := hub.GetRoom(roomId)
+	if room == nil {
+		t.Fatal("expected room to be created")
+	}
+}
+
 func TestWebsocketConnection(t *testing.T) {
 	hub := NewHub()
 	hub.run()
@@ -17,8 +54,6 @@ func TestWebsocketConnection(t *testing.T) {
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
-
-	fmt.Println(ts.URL)
 
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.Dial("ws"+ts.URL[4:], nil)

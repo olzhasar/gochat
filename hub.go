@@ -1,10 +1,18 @@
 package main
 
-import "log"
+import (
+	"github.com/google/uuid"
+	"log"
+)
 
 type Message struct {
 	author  *Client
 	content []byte
+}
+
+type Room struct {
+	ID      string
+	clients []*Client
 }
 
 type Hub struct {
@@ -12,6 +20,7 @@ type Hub struct {
 	registerChan   chan *Client
 	unregisterChan chan *Client
 	broadcastChan  chan Message
+	rooms          map[string]*Room
 }
 
 func NewHub() *Hub {
@@ -20,6 +29,7 @@ func NewHub() *Hub {
 		unregisterChan: make(chan *Client),
 		broadcastChan:  make(chan Message),
 		clients:        make([]*Client, 0),
+		rooms:          make(map[string]*Room),
 	}
 }
 
@@ -106,4 +116,27 @@ func (h *Hub) listenClient(client *Client) {
 			h.broadcast(msg)
 		}
 	}()
+}
+
+func generateID() string {
+	return uuid.New().String()
+}
+
+func (h *Hub) CreateRoom() *Room {
+	for {
+		id := generateID()
+		if h.rooms[id] == nil {
+			room := &Room{ID: id}
+			h.rooms[room.ID] = room
+			return room
+		}
+	}
+}
+
+func (h *Hub) GetRoom(id string) *Room {
+	return h.rooms[id]
+}
+
+func (h *Hub) RoomCount() int {
+	return len(h.rooms)
 }

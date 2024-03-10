@@ -115,7 +115,7 @@ func TestSetName(t *testing.T) {
 	defer conn.Close()
 
 	name := "test"
-	if err := conn.WriteMessage(websocket.TextMessage, []byte(name)); err != nil {
+	if err := conn.WriteMessage(websocket.TextMessage, []byte("2test")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,7 +126,7 @@ func TestSetName(t *testing.T) {
 	}
 }
 
-func TestRoomMessage(t *testing.T) {
+func TestTextMessage(t *testing.T) {
 	hub := NewHub()
 	hub.run()
 
@@ -142,25 +142,39 @@ func TestRoomMessage(t *testing.T) {
 	defer conn1.Close()
 	defer conn2.Close()
 
-	conn1.WriteMessage(websocket.TextMessage, []byte("test"))
+	conn1.WriteMessage(websocket.TextMessage, []byte("2test"))
 
-	message := []byte("hello")
+	message := []byte("1hello")
 	if err := conn1.WriteMessage(websocket.TextMessage, message); err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	expected := "test|hello"
+	checkReceivedMessage(t, conn2, "2test|")
+	checkReceivedMessage(t, conn2, "1test|hello")
+}
 
-	_, received, err := conn2.ReadMessage()
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestLeaveMessage(t *testing.T) {
+	hub := NewHub()
+	hub.run()
 
-	if string(received) != expected {
-		t.Fatalf("expected message %s, got %s", expected, received)
-	}
+	room := hub.CreateRoom()
+
+	server := NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	conn1 := makeConnection(ts, room.ID)
+	defer conn1.Close()
+
+	conn2 := makeConnection(ts, room.ID)
+	conn2.WriteMessage(websocket.TextMessage, []byte("2leaver"))
+	conn2.Close()
+
+	checkReceivedMessage(t, conn1, "2leaver|")
+	checkReceivedMessage(t, conn1, "3leaver|")
 }
 
 func TestRoomDeletedAfterLastClientLeaves(t *testing.T) {
@@ -205,4 +219,19 @@ func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	}
 
 	return conn
+}
+
+func checkReceivedMessage(t testing.TB, conn *websocket.Conn, expected string) {
+	t.Helper()
+
+	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+
+	_, received, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatalf("expected message %s, got error %s", expected, err)
+	}
+
+	if string(received) != expected {
+		t.Fatalf("expected message %s, got %s", expected, received)
+	}
 }

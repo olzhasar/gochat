@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
+const router = useRouter();
 const roomId = route.params.roomId;
 
 const apiURL = import.meta.env.VITE_API_URL as string;
@@ -38,9 +39,27 @@ const scrollToBottom = () => {
   setTimeout(() => (messagesDiv.scrollTop = messagesDiv.scrollHeight), 0);
 };
 
+const checkRoomExists = async (): Promise<boolean> => {
+  const url = `${apiURL}/room/${roomId}`;
+
+  try {
+    const response = await fetch(url);
+    return response.ok;
+  } catch (error) {
+    console.error("API request failed:", error);
+    return false;
+  }
+};
+
 let ws: WebSocket;
 
-const connect = (): WebSocket => {
+const connect = async (): Promise<WebSocket> => {
+  const roomExists = await checkRoomExists();
+
+  if (!roomExists) {
+    router.push({ name: "index" });
+    throw new Error("Room not found");
+  }
   ws = new WebSocket(roomURL);
 
   ws.onopen = () => {

@@ -226,22 +226,15 @@ const share = async () => {
       </div>
     </div>
 
-    <form
-      v-if="!nameSet"
-      class="space-y-2"
-      @submit="
-        (event) => {
-          event.preventDefault();
-          setName();
-        }
-      "
-    >
+    <form v-if="!nameSet" class="space-y-2" @submit.prevent="setName">
       <input
         tabindex="0"
         v-model="name"
         class="w-full input input-bordered"
         type="text"
         placeholder="Enter your name"
+        minlength="1"
+        required
         autofocus
       />
       <button class="btn btn-primary btn-block">Start chatting</button>
@@ -287,12 +280,7 @@ const share = async () => {
     </div>
 
     <form
-      @submit="
-        (event) => {
-          event.preventDefault();
-          sendMessage();
-        }
-      "
+      @submit.prevent="sendMessage"
       class="flex gap-2 pr-0 my-4"
       id="messageForm"
       v-show="nameSet"

@@ -93,7 +93,6 @@ const receiveMessage = (event: MessageEvent) => {
     msg.msgType === MessageType.STOP_TYPING &&
     personTyping.value === msg.author
   ) {
-    console.log("stopped typing: " + msg.author);
     personTyping.value = "";
     return;
   }

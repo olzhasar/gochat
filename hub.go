@@ -227,7 +227,7 @@ func (h *Hub) RoomCount() int {
 func (h *Hub) scheduleRoomTermination(room *Room) {
 	go func() {
 		time.Sleep(EMPTY_ROOM_TIMEOUT)
-		if room.ClientCount() > 0 {
+		if room.ClientCount() > 0 || h.rooms[room.ID] == nil {
 			return
 		}
 		log.Println("terminating room", room.ID)

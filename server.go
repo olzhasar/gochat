@@ -68,7 +68,7 @@ func NewServer(hub *Hub) *Server {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /room", handleRoomCreate(hub))
-	mux.HandleFunc("GET /room/{room}", handleWS(upgrader, hub))
+	mux.HandleFunc("GET /ws/{room}", handleWS(upgrader, hub))
 
 	return &Server{upgrader: upgrader, hub: hub, mux: mux}
 }

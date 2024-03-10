@@ -7,7 +7,7 @@ const roomId = route.params.roomId;
 const apiURL = import.meta.env.VITE_API_URL as string;
 const wsURL = apiURL.replace("http", "ws");
 
-const roomURL = `${wsURL}/room/${roomId}`;
+const roomURL = `${wsURL}/ws/${roomId}`;
 
 import { Ref, onMounted, ref } from "vue";
 

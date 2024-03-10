@@ -59,7 +59,7 @@ func TestConnectToRoom(t *testing.T) {
 	defer ts.Close()
 
 	dialer := websocket.Dialer{}
-	url := "ws" + ts.URL[4:] + "/room/" + room.ID
+	url := "ws" + ts.URL[4:] + "/ws/" + room.ID
 
 	conn, resp, err := dialer.Dial(url, nil)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestConnectToUnexistingRoom(t *testing.T) {
 	defer ts.Close()
 
 	dialer := websocket.Dialer{}
-	url := "ws" + ts.URL[4:] + "/room/123"
+	url := "ws" + ts.URL[4:] + "/ws/123"
 
 	_, resp, err := dialer.Dial(url, nil)
 	if err == nil {
@@ -179,7 +179,7 @@ func TestLeaveMessage(t *testing.T) {
 
 func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	dialer := websocket.Dialer{}
-	url := "ws" + ts.URL[4:] + "/room/" + roomId
+	url := "ws" + ts.URL[4:] + "/ws/" + roomId
 
 	conn, _, err := dialer.Dial(url, nil)
 

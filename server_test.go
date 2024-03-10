@@ -177,37 +177,6 @@ func TestLeaveMessage(t *testing.T) {
 	checkReceivedMessage(t, conn1, "3leaver|")
 }
 
-func TestRoomDeletedAfterLastClientLeaves(t *testing.T) {
-	hub := NewHub()
-	hub.run()
-
-	room := hub.CreateRoom()
-
-	server := NewServer(hub)
-
-	ts := httptest.NewServer(server)
-	defer ts.Close()
-
-	conn := makeConnection(ts, room.ID)
-	defer conn.Close()
-
-	if room.ClientCount() != 1 {
-		t.Fatalf("expected 1 client, got %d", room.ClientCount())
-	}
-
-	conn.Close()
-
-	time.Sleep(50 * time.Millisecond)
-
-	if room.ClientCount() != 0 {
-		t.Fatalf("expected 0 clients, got %d", room.ClientCount())
-	}
-
-	if hub.GetRoom(room.ID) != nil {
-		t.Fatal("expected room to be deleted")
-	}
-}
-
 func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	dialer := websocket.Dialer{}
 	url := "ws" + ts.URL[4:] + "/room/" + roomId

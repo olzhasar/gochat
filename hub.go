@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const EMPTY_ROOM_TIMEOUT = 5 * time.Minute
+const EMPTY_ROOM_TIMEOUT = 1 * time.Minute
 
 const MESSAGE_TYPE_TEXT = 1
 const MESSAGE_TYPE_NAME = 2
@@ -130,9 +130,7 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 
 	client.close()
 
-	if room.ClientCount() == 0 {
-		h.terminateRoomIfEmpty(room)
-	}
+	h.scheduleRoomTermination(room)
 
 	log.Println("client disconnected ", client.name)
 	log.Println("clients in the room: ", len(room.clients))
@@ -213,10 +211,7 @@ func (h *Hub) CreateRoom() *Room {
 		}
 	}
 
-	go func() {
-		time.Sleep(EMPTY_ROOM_TIMEOUT)
-		h.terminateRoomIfEmpty(room)
-	}()
+	h.scheduleRoomTermination(room)
 
 	return room
 }
@@ -229,10 +224,13 @@ func (h *Hub) RoomCount() int {
 	return len(h.rooms)
 }
 
-func (h *Hub) terminateRoomIfEmpty(room *Room) {
-	if room.ClientCount() > 0 {
-		return
-	}
-	log.Println("terminating room", room.ID)
-	delete(h.rooms, room.ID)
+func (h *Hub) scheduleRoomTermination(room *Room) {
+	go func() {
+		time.Sleep(EMPTY_ROOM_TIMEOUT)
+		if room.ClientCount() > 0 {
+			return
+		}
+		log.Println("terminating room", room.ID)
+		delete(h.rooms, room.ID)
+	}()
 }

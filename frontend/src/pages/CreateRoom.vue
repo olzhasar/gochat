@@ -5,6 +5,7 @@ import { ref } from "vue";
 const router = useRouter();
 
 let loading = ref(false);
+let errorOccured = ref(false);
 
 const createRoom = () => {
   const apiUrl = import.meta.env.VITE_API_URL as string;
@@ -17,8 +18,12 @@ const createRoom = () => {
   })
     .then((response) => response.text())
     .then((data) => {
-      console.log(data);
       router.push({ name: "room", params: { roomId: data } });
+    })
+    .catch((error) => {
+      console.error("API request failed:", error);
+      errorOccured.value = true;
+      loading.value = false;
     });
 };
 </script>
@@ -36,6 +41,12 @@ const createRoom = () => {
 
     <div v-else class="flex justify-center items-center h-screen">
       <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  </div>
+
+  <div v-if="errorOccured" class="toast toast-center toast-middle">
+    <div class="alert alert-error">
+      <span>Unexpected error occured. Please, try later</span>
     </div>
   </div>
 </template>

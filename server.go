@@ -24,6 +24,18 @@ func handleRoomCreate(hub *Hub) http.HandlerFunc {
 
 func handleWS(upgrader websocket.Upgrader, hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		roomID := r.PathValue("room")
+		if roomID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		room := hub.GetRoom(roomID)
+		if room == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Failed to upgrade connection")
@@ -32,7 +44,9 @@ func handleWS(upgrader websocket.Upgrader, hub *Hub) http.HandlerFunc {
 		}
 
 		client := NewClient(conn)
-		hub.register(client)
+		hub.register(client, room)
+
+		hub.listenClient(client, room)
 	}
 }
 
@@ -43,8 +57,8 @@ func NewServer(hub *Hub) *Server {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", handleWS(upgrader, hub))
 	mux.HandleFunc("POST /room", handleRoomCreate(hub))
+	mux.HandleFunc("GET /room/{room}", handleWS(upgrader, hub))
 
 	return &Server{upgrader: upgrader, hub: hub, mux: mux}
 }

@@ -2,12 +2,18 @@ package main
 
 import (
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"log"
 )
 
 type Message struct {
+	room    *Room
 	author  *Client
 	content []byte
+}
+
+func NewMessage(author *Client, room *Room, content []byte) Message {
+	return Message{author: author, room: room, content: content}
 }
 
 type Room struct {
@@ -15,54 +21,66 @@ type Room struct {
 	clients []*Client
 }
 
+func (r *Room) ClientCount() int {
+	return len(r.clients)
+}
+
+type Instruction struct {
+	client *Client
+	room   *Room
+}
+
+func NewInstruction(client *Client, room *Room) Instruction {
+	return Instruction{client: client, room: room}
+}
+
 type Hub struct {
-	clients        []*Client
-	registerChan   chan *Client
-	unregisterChan chan *Client
+	registerChan   chan Instruction
+	unregisterChan chan Instruction
 	broadcastChan  chan Message
 	rooms          map[string]*Room
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		registerChan:   make(chan *Client),
-		unregisterChan: make(chan *Client),
+		registerChan:   make(chan Instruction),
+		unregisterChan: make(chan Instruction),
 		broadcastChan:  make(chan Message),
-		clients:        make([]*Client, 0),
 		rooms:          make(map[string]*Room),
 	}
 }
 
-func (h *Hub) register(client *Client) {
-	h.registerChan <- client
-	client.listen()
-	h.listenClient(client)
+func (h *Hub) register(client *Client, room *Room) {
+	h.registerChan <- NewInstruction(client, room)
 }
 
-func (h *Hub) unregister(client *Client) {
-	h.unregisterChan <- client
-	client.close()
+func (h *Hub) unregister(client *Client, room *Room) {
+	h.unregisterChan <- NewInstruction(client, room)
 }
 
 func (h *Hub) broadcast(message Message) {
 	h.broadcastChan <- message
 }
 
-func (h *Hub) handleRegister(client *Client) {
-	h.clients = append(h.clients, client)
+func (h *Hub) handleRegister(client *Client, room *Room) {
+	room.clients = append(room.clients, client)
+	client.listen()
 	log.Println("client connected")
-	log.Println("clients connected: ", len(h.clients))
+	log.Println("clients in the room: ", len(room.clients))
 }
 
-func (h *Hub) handleUnregister(client *Client) {
-	for i, c := range h.clients {
+func (h *Hub) handleUnregister(client *Client, room *Room) {
+	for i, c := range room.clients {
 		if c == client {
-			h.clients = append(h.clients[:i], h.clients[i+1:]...)
+			room.clients = append(room.clients[:i], room.clients[i+1:]...)
 			break
 		}
 	}
+
+	client.close()
+
 	log.Println("client disconnected")
-	log.Println("clients connected: ", len(h.clients))
+	log.Println("clients in the room: ", len(room.clients))
 }
 
 func encodeMessage(message Message) []byte {
@@ -81,7 +99,7 @@ func (h *Hub) handleBroadcast(message Message) {
 
 	encoded := encodeMessage(message)
 
-	for _, client := range h.clients {
+	for _, client := range message.room.clients {
 		if client != message.author {
 			client.write(encoded)
 		}
@@ -92,10 +110,10 @@ func (h *Hub) run() {
 	go func() {
 		for {
 			select {
-			case client := <-h.registerChan:
-				h.handleRegister(client)
-			case client := <-h.unregisterChan:
-				h.handleUnregister(client)
+			case instruction := <-h.registerChan:
+				h.handleRegister(instruction.client, instruction.room)
+			case instruction := <-h.unregisterChan:
+				h.handleUnregister(instruction.client, instruction.room)
 			case message := <-h.broadcastChan:
 				h.handleBroadcast(message)
 			}
@@ -103,19 +121,21 @@ func (h *Hub) run() {
 	}()
 }
 
-func (h *Hub) listenClient(client *Client) {
-	go func() {
-		for {
-			_, message, err := client.conn.ReadMessage()
-			if err != nil {
-				h.unregister(client)
-				return
-			}
-
-			msg := Message{author: client, content: message}
-			h.broadcast(msg)
+func (h *Hub) listenClient(client *Client, room *Room) {
+	for {
+		messageType, message, err := client.conn.ReadMessage()
+		if err != nil {
+			h.unregister(client, room)
+			return
 		}
-	}()
+
+		if messageType != websocket.TextMessage {
+			continue
+		}
+
+		msg := NewMessage(client, room, message)
+		h.broadcast(msg)
+	}
 }
 
 func generateID() string {

@@ -29,3 +29,21 @@ func TestHubCreateRoom(t *testing.T) {
 		t.Fatal("expected hub to have 2 rooms")
 	}
 }
+
+func TestHubRegisterClient(t *testing.T) {
+	hub := NewHub()
+	hub.run()
+
+	room := hub.CreateRoom()
+
+	client := NewClient(nil)
+	hub.register(client, room)
+
+	if len(room.clients) != 1 {
+		t.Fatal("expected client to be in room")
+	}
+
+	if room.clients[0] != client {
+		t.Fatal("expected client to be in room")
+	}
+}

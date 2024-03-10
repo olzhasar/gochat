@@ -47,16 +47,21 @@ func TestCreateRoom(t *testing.T) {
 	}
 }
 
-func TestWebsocketConnection(t *testing.T) {
+func TestConnectToRoom(t *testing.T) {
 	hub := NewHub()
 	hub.run()
+
+	room := hub.CreateRoom()
+
 	server := NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
 	dialer := websocket.Dialer{}
-	conn, resp, err := dialer.Dial("ws"+ts.URL[4:], nil)
+	url := "ws" + ts.URL[4:] + "/room/" + room.ID
+
+	conn, resp, err := dialer.Dial(url, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,12 +73,12 @@ func TestWebsocketConnection(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if len(hub.clients) != 1 {
-		t.Fatalf("expected 1 client, got %d", len(hub.clients))
+	if room.ClientCount() != 1 {
+		t.Fatalf("expected 1 client, got %d", room.ClientCount())
 	}
 }
 
-func TestSetName(t *testing.T) {
+func TestConnectToUnexistingRoom(t *testing.T) {
 	hub := NewHub()
 	hub.run()
 
@@ -82,7 +87,31 @@ func TestSetName(t *testing.T) {
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	conn := makeConnection(ts)
+	dialer := websocket.Dialer{}
+	url := "ws" + ts.URL[4:] + "/room/123"
+
+	_, resp, err := dialer.Dial(url, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status code %d, got %d", http.StatusNotFound, resp.StatusCode)
+	}
+}
+
+func TestSetName(t *testing.T) {
+	hub := NewHub()
+	hub.run()
+
+	room := hub.CreateRoom()
+
+	server := NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	conn := makeConnection(ts, room.ID)
 	defer conn.Close()
 
 	name := "test"
@@ -92,22 +121,24 @@ func TestSetName(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if hub.clients[0].name != name {
-		t.Fatalf("expected name %s, got %s", name, hub.clients[0].name)
+	if room.clients[0].name != name {
+		t.Fatalf("expected name %s, got %s", name, room.clients[0].name)
 	}
 }
 
-func TestWebsocketMessage(t *testing.T) {
+func TestRoomMessage(t *testing.T) {
 	hub := NewHub()
 	hub.run()
+
+	room := hub.CreateRoom()
 
 	server := NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	conn1 := makeConnection(ts)
-	conn2 := makeConnection(ts)
+	conn1 := makeConnection(ts, room.ID)
+	conn2 := makeConnection(ts, room.ID)
 	defer conn1.Close()
 	defer conn2.Close()
 
@@ -132,9 +163,11 @@ func TestWebsocketMessage(t *testing.T) {
 	}
 }
 
-func makeConnection(ts *httptest.Server) *websocket.Conn {
+func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	dialer := websocket.Dialer{}
-	conn, _, err := dialer.Dial("ws"+ts.URL[4:], nil)
+	url := "ws" + ts.URL[4:] + "/room/" + roomId
+
+	conn, _, err := dialer.Dial(url, nil)
 
 	if err != nil {
 		panic(err)

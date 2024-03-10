@@ -48,8 +48,7 @@ const connect = (): WebSocket => {
     connected.value = true;
 
     if (nameSet.value) {
-      console.log("Sending name: " + name.value);
-      ws.send(name.value);
+      setName();
     }
   };
   ws.onmessage = (event) => {

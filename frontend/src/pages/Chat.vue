@@ -11,7 +11,16 @@ const roomURL = `${wsURL}/room/${roomId}`;
 
 import { Ref, onMounted, ref } from "vue";
 
+enum MessageType {
+  TEXT = 1,
+  NAME = 2,
+  LEAVE = 3,
+  TYPING = 4,
+  STOP_TYPING = 5,
+}
+
 interface Message {
+  msgType: number;
   content: string;
   author: string | null;
 }
@@ -62,9 +71,15 @@ onMounted(() => {
 
 const receiveMessage = (event: MessageEvent) => {
   const rawMessage = event.data as string;
-  const [author, content] = rawMessage.split("|");
-  messages.value.push({ content: content, author: author });
+  const msgType = parseInt(rawMessage.charAt(0));
+  const [author, content] = rawMessage.slice(1).split("|");
+  messages.value.push({ msgType: msgType, content: content, author: author });
   scrollToBottom();
+};
+
+const sendToWS = (message: string, messageType: MessageType) => {
+  const content = `${messageType}${message}`;
+  ws.send(content);
 };
 
 const sendMessage = () => {
@@ -72,15 +87,19 @@ const sendMessage = () => {
     return;
   }
 
-  ws.send(messagePrompt.value);
-  messages.value.push({ content: messagePrompt.value, author: null });
+  sendToWS(messagePrompt.value, MessageType.TEXT);
+  messages.value.push({
+    msgType: MessageType.TEXT,
+    content: messagePrompt.value,
+    author: null,
+  });
   messagePrompt.value = "";
   scrollToBottom();
   focusMessageInput();
 };
 
 const setName = () => {
-  ws.send(name.value);
+  sendToWS(name.value, MessageType.NAME);
   nameSet.value = true;
   scrollToBottom();
 
@@ -126,16 +145,30 @@ const focusMessageInput = () => {
       class="overflow-y-scroll flex-grow pr-2 my-4 space-y-2 no-scrollbar"
     >
       <div v-for="msg in messages">
-        <div v-if="msg.author != null" class="chat chat-start">
+        <div
+          v-if="msg.msgType == MessageType.TEXT && msg.author != null"
+          class="chat chat-start"
+        >
           <div class="chat-header">{{ msg.author }}</div>
           <div class="chat-bubble chat-bubble-primary">
             {{ msg.content }}
           </div>
         </div>
 
-        <div v-else class="chat chat-end">
+        <div
+          v-if="msg.msgType == MessageType.TEXT && msg.author === null"
+          class="chat chat-end"
+        >
           <div class="chat-bubble">{{ msg.content }}</div>
         </div>
+
+        <p v-if="msg.msgType == MessageType.NAME" class="my-2 text-center">
+          {{ msg.author }} has joined the chat
+        </p>
+
+        <p v-if="msg.msgType == MessageType.LEAVE" class="my-2 text-center">
+          {{ msg.author }} has disconnected
+        </p>
       </div>
     </div>
 

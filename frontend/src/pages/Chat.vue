@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
 import Navbar from "../components/Navbar.vue";
+import { MessageType, Message } from "@/types";
 
 const route = useRoute();
 const router = useRouter();
@@ -12,20 +13,6 @@ const wsURL = apiURL.replace("http", "ws");
 const roomURL = `${wsURL}/ws/${roomId}`;
 
 import { Ref, onMounted, ref } from "vue";
-
-enum MessageType {
-  TEXT = 1,
-  NAME = 2,
-  LEAVE = 3,
-  TYPING = 4,
-  STOP_TYPING = 5,
-}
-
-interface Message {
-  msgType: number;
-  content: string;
-  author: string | null;
-}
 
 let connected = ref(false);
 let messages: Ref<Message[]> = ref([]);

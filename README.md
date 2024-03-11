@@ -4,6 +4,8 @@ This is a simple web messaging application built with Go and Vue.js. Users can c
 
 Check out the [live application](https://chat.olzhasar.com/)
 
+![Screenshot](assets/screenshot.png)
+
 ## Features
 - Create rooms with unique URLs
 - Invite others by sharing the room URL

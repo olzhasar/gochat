@@ -106,7 +106,6 @@ func (h *Hub) unregister(client *Client, room *Room) {
 }
 
 func (h *Hub) broadcast(message Message) {
-	log.Printf("Broadcasting message %s", message.encode())
 	h.broadcastChan <- message
 }
 
@@ -140,7 +139,6 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 
 func (h *Hub) handleBroadcast(message Message) {
 	encoded := message.encode()
-	log.Printf("Handling broadcasted message: %s", encoded)
 
 	for _, client := range message.room.clients {
 		if client != message.author {
@@ -178,7 +176,7 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 
 		msgType, content, err := parseMessageData(message)
 		if err != nil {
-			log.Println("Invalid message received")
+			log.Println("Invalid message received. Disconnecting client.")
 			h.unregister(client, room)
 			continue
 		}
@@ -187,10 +185,11 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 
 		if msg.msgType == MESSAGE_TYPE_NAME {
 			client.setName(string(msg.content))
+			log.Println("Client set name to ", client.name)
 		}
 
 		if client.name == "" && msg.msgType != MESSAGE_TYPE_NAME {
-			log.Println("Client name not set")
+			log.Println("Client name not set. Disconnecting client.")
 			h.unregister(client, room)
 			continue
 		}
@@ -214,6 +213,9 @@ func (h *Hub) CreateRoom() *Room {
 			break
 		}
 	}
+
+	log.Println("created room ", room.ID)
+	log.Println("rooms count: ", h.RoomCount())
 
 	h.scheduleRoomTermination(room)
 

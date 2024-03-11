@@ -2,6 +2,7 @@
 import { useRoute, useRouter } from "vue-router";
 import Navbar from "../components/Navbar.vue";
 import { MessageType, Message } from "@/types";
+import MessageDiv from "@/components/Message.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -190,30 +191,7 @@ const notifyStopTyping = () => {
       class="overflow-y-scroll flex-grow pr-2 space-y-2 no-scrollbar"
     >
       <div v-for="msg in messages">
-        <div
-          v-if="msg.msgType == MessageType.TEXT && msg.author != null"
-          class="chat chat-start"
-        >
-          <div class="chat-header">{{ msg.author }}</div>
-          <div class="chat-bubble chat-bubble-primary">
-            {{ msg.content }}
-          </div>
-        </div>
-
-        <div
-          v-if="msg.msgType == MessageType.TEXT && msg.author === null"
-          class="chat chat-end"
-        >
-          <div class="chat-bubble">{{ msg.content }}</div>
-        </div>
-
-        <p v-if="msg.msgType == MessageType.NAME" class="my-2 text-center">
-          {{ msg.author }} has joined the chat
-        </p>
-
-        <p v-if="msg.msgType == MessageType.LEAVE" class="my-2 text-center">
-          {{ msg.author }} has disconnected
-        </p>
+        <MessageDiv :msg="msg" />
       </div>
 
       <div v-if="personTyping" class="chat chat-start">

@@ -12,7 +12,7 @@ import (
 
 func TestCreateRoom(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	server := NewServer(hub)
 
@@ -49,7 +49,7 @@ func TestCreateRoom(t *testing.T) {
 
 func TestConnectToRoom(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
@@ -80,7 +80,7 @@ func TestConnectToRoom(t *testing.T) {
 
 func TestConnectToUnexistingRoom(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	server := NewServer(hub)
 
@@ -102,7 +102,7 @@ func TestConnectToUnexistingRoom(t *testing.T) {
 
 func TestSetName(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
@@ -128,7 +128,7 @@ func TestSetName(t *testing.T) {
 
 func TestTextMessage(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
@@ -157,7 +157,7 @@ func TestTextMessage(t *testing.T) {
 
 func TestLeaveMessage(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
@@ -179,7 +179,7 @@ func TestLeaveMessage(t *testing.T) {
 
 func TestGetRoom(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
@@ -200,7 +200,7 @@ func TestGetRoom(t *testing.T) {
 
 func TestGetUnexistingRoom(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	server := NewServer(hub)
 

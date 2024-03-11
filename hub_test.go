@@ -32,12 +32,12 @@ func TestHubCreateRoom(t *testing.T) {
 
 func TestHubRegisterClient(t *testing.T) {
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	room := hub.CreateRoom()
 
 	client := NewClient(nil)
-	hub.register(client, room)
+	hub.Register(client, room)
 
 	if len(room.clients) != 1 {
 		t.Fatal("expected client to be in room")

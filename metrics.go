@@ -39,7 +39,9 @@ func (s *MetricsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	promhttp.Handler().ServeHTTP(w, r)
 }
 
-func (s *MetricsServer) run() {
-	log.Println("Starting metrics server on port", s.port)
-	log.Fatal(http.ListenAndServe(":"+s.port, s))
+func (s *MetricsServer) Run() {
+	go func() {
+		log.Println("Starting metrics server on port", s.port)
+		log.Fatal(http.ListenAndServe(":"+s.port, s))
+	}()
 }

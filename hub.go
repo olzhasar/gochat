@@ -1,10 +1,7 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,56 +9,6 @@ import (
 )
 
 const EMPTY_ROOM_TIMEOUT = 1 * time.Minute
-
-const MESSAGE_TYPE_TEXT = 1
-const MESSAGE_TYPE_NAME = 2
-const MESSAGE_TYPE_LEAVE = 3
-const MESSAGE_TYPE_TYPING = 4
-const MESSAGE_TYPE_STOP_TYPING = 5
-
-type Message struct {
-	msgType int
-	room    *Room
-	author  *Client
-	content []byte
-}
-
-func (m Message) encode() []byte {
-	var content string
-	if m.msgType == MESSAGE_TYPE_TEXT {
-		content = string(m.content)
-	}
-	output := fmt.Sprintf("%d%s|%s", m.msgType, m.author.name, content)
-	return []byte(output)
-}
-
-func parseMsgType(firstByte byte) (int, error) {
-	num, err := strconv.Atoi(string(firstByte))
-	if err != nil {
-		return 0, err
-	}
-	if num < 1 || num > 6 {
-		return 0, errors.New("Invalid message type")
-	}
-
-	return num, nil
-}
-
-func parseMessageData(data []byte) (int, []byte, error) {
-	msgType, err := parseMsgType(data[0])
-
-	if err != nil {
-		return 0, nil, err
-	}
-
-	content := data[1:]
-
-	return msgType, content, nil
-}
-
-func NewMessage(author *Client, room *Room, msgType int, content []byte) Message {
-	return Message{author: author, room: room, msgType: msgType, content: content}
-}
 
 type Room struct {
 	ID      string
@@ -97,15 +44,15 @@ func NewHub() *Hub {
 	}
 }
 
-func (h *Hub) register(client *Client, room *Room) {
+func (h *Hub) Register(client *Client, room *Room) {
 	h.registerChan <- NewInstruction(client, room)
 }
 
-func (h *Hub) unregister(client *Client, room *Room) {
+func (h *Hub) Unregister(client *Client, room *Room) {
 	h.unregisterChan <- NewInstruction(client, room)
 }
 
-func (h *Hub) broadcast(message Message) {
+func (h *Hub) Broadcast(message Message) {
 	h.broadcastChan <- message
 }
 
@@ -125,7 +72,7 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 
 	if client.name != "" {
 		leaveMsg := NewMessage(client, room, MESSAGE_TYPE_LEAVE, nil)
-		go h.broadcast(leaveMsg)
+		go h.Broadcast(leaveMsg)
 	}
 
 	client.close()
@@ -136,7 +83,7 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 }
 
 func (h *Hub) handleBroadcast(message Message) {
-	encoded := message.encode()
+	encoded := message.Encode()
 
 	for _, client := range message.room.clients {
 		if client != message.author {
@@ -148,7 +95,7 @@ func (h *Hub) handleBroadcast(message Message) {
 	messagesReceivedCount.Inc()
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	go func() {
 		for {
 			select {
@@ -163,11 +110,11 @@ func (h *Hub) run() {
 	}()
 }
 
-func (h *Hub) listenClient(client *Client, room *Room) {
+func (h *Hub) ListenClient(client *Client, room *Room) {
 	for {
 		messageType, message, err := client.conn.ReadMessage()
 		if err != nil || messageType == websocket.CloseMessage {
-			h.unregister(client, room)
+			h.Unregister(client, room)
 			return
 		}
 
@@ -178,7 +125,7 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 		msgType, content, err := parseMessageData(message)
 		if err != nil {
 			log.Println("Invalid message received. Disconnecting client.")
-			h.unregister(client, room)
+			h.Unregister(client, room)
 			continue
 		}
 
@@ -190,16 +137,12 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 
 		if client.name == "" && msg.msgType != MESSAGE_TYPE_NAME {
 			log.Println("Client name not set. Disconnecting client.")
-			h.unregister(client, room)
+			h.Unregister(client, room)
 			continue
 		}
 
-		h.broadcast(msg)
+		h.Broadcast(msg)
 	}
-}
-
-func generateID() string {
-	return uuid.New().String()
 }
 
 func (h *Hub) CreateRoom() *Room {
@@ -238,4 +181,8 @@ func (h *Hub) scheduleRoomTermination(room *Room) {
 		delete(h.rooms, room.ID)
 		roomCount.Dec()
 	}()
+}
+
+func generateID() string {
+	return uuid.New().String()
 }

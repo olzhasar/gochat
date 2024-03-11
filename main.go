@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"net/http"
 	"os"
 )
 
@@ -12,14 +10,12 @@ func main() {
 		port = "8080"
 	}
 
+	metricsServer := NewMetricsServer("2112")
+	metricsServer.Run()
+
 	hub := NewHub()
-	hub.run()
+	hub.Run()
 
 	server := NewServer(hub)
-
-	metricsServer := NewMetricsServer("2112")
-	go metricsServer.run()
-
-	log.Println("Starting server on port", port)
-	log.Fatal(http.ListenAndServe(":"+port, server))
+	server.Run(port)
 }

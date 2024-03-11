@@ -66,9 +66,9 @@ func handleWS(upgrader websocket.Upgrader, hub *Hub) http.HandlerFunc {
 		}
 
 		client := NewClient(conn)
-		hub.register(client, room)
+		hub.Register(client, room)
 
-		hub.listenClient(client, room)
+		hub.ListenClient(client, room)
 	}
 }
 
@@ -94,4 +94,9 @@ func NewServer(hub *Hub) *Server {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
+}
+
+func (s *Server) Run(port string) {
+	log.Println("Starting server on port", port)
+	log.Fatal(http.ListenAndServe(":"+port, s))
 }

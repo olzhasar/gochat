@@ -11,8 +11,9 @@ const share = async () => {
       console.error("Error sharing:", error);
     }
   } else {
+    window.navigator.clipboard.writeText(window.location.href);
     alert(
-      "Sharing not supported on this browser. Please, copy the link manually.",
+      "Link copied to clipboard. Share it with others you want to join the chat room.",
     );
   }
 };

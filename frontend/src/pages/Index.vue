@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { ref } from "vue";
+import GithubButton from "vue-github-button";
 
 const router = useRouter();
 
@@ -60,12 +61,16 @@ const createRoom = () => {
             >
             connections
           </li>
+          <li>The project is open-source and available on GitHub</li>
         </ul>
 
-        <div class="mt-4">
-          Created by
-          <a class="link link-secondary" href="https://github.com/olzhasar"
-            >@olzhasar</a
+        <div>
+          <github-button
+            href="https://github.com/olzhasar/gochat"
+            data-color-scheme="no-preference: light; light: light; dark: dark;"
+            data-size="large"
+            aria-label="Star olzhasar/gochat on GitHub"
+            >Star</github-button
           >
         </div>
       </div>

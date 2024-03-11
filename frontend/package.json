@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "vue": "^3.4.19",
+    "vue-github-button": "^3.1.0",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {

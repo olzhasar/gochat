@@ -217,23 +217,6 @@ func TestGetUnexistingRoom(t *testing.T) {
 	}
 }
 
-func TestMetrics(t *testing.T) {
-	hub := NewHub()
-	server := NewServer(hub)
-
-	ts := httptest.NewServer(server)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/metrics")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
-	}
-}
-
 func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	dialer := websocket.Dialer{}
 	url := "ws" + ts.URL[4:] + "/ws/" + roomId

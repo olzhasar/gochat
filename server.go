@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Server struct {
@@ -90,7 +88,6 @@ func NewServer(hub *Hub) *Server {
 	mux.HandleFunc("POST /room", handleRoomCreate(hub))
 	mux.HandleFunc("GET /room/{room}", handleRoomGet(hub))
 	mux.HandleFunc("GET /ws/{room}", handleWS(upgrader, hub))
-	mux.Handle("/metrics", promhttp.Handler())
 
 	return &Server{upgrader: upgrader, hub: hub, mux: mux}
 }

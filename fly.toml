@@ -23,3 +23,7 @@ primary_region = 'waw'
 
 [[vm]]
   size = 'shared-cpu-1x'
+
+[[ metrics ]]
+port = "2112"
+path = "/metrics"

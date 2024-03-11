@@ -9,28 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-var (
-	roomCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "room_count",
-		Help: "The number of active rooms",
-	})
-	clientCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "client_count",
-		Help: "The number of active clients",
-	})
-	messagesReceivedCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "messages_received",
-		Help: "The number of messages received from all connections",
-	})
-	messagesBroadcastedCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "messages_broadcasted",
-		Help: "The number of messages broadcasted to all connections",
-	})
 )
 
 const EMPTY_ROOM_TIMEOUT = 1 * time.Minute

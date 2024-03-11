@@ -17,6 +17,9 @@ func main() {
 
 	server := NewServer(hub)
 
+	metricsServer := NewMetricsServer("2112")
+	go metricsServer.run()
+
 	log.Println("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(":"+port, server))
 }

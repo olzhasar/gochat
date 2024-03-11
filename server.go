@@ -87,17 +87,23 @@ func (s *Server) configureRoutes() {
 }
 
 func NewServer(hub *Hub) *Server {
-	upgrader := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin:     func(r *http.Request) bool { return true },
-	}
-	mux := http.NewServeMux()
-
 	var corsAllowOrigin string
 	if corsAllowOrigin = os.Getenv("CORS_ORIGIN"); corsAllowOrigin == "" {
 		corsAllowOrigin = "*"
 	}
+
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			if corsAllowOrigin == "*" {
+				return true
+			}
+			origin := r.Header.Get("Origin")
+			return origin == corsAllowOrigin
+		},
+	}
+	mux := http.NewServeMux()
 
 	server := &Server{upgrader: upgrader, hub: hub, corsAllowOrigin: corsAllowOrigin, mux: mux}
 	server.configureRoutes()

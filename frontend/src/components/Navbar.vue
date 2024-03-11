@@ -4,7 +4,7 @@ const share = async () => {
     try {
       await navigator.share({
         title: "Join my super secret chat room",
-        text: "Join my super secret chat room",
+        text: window.location.href,
         url: window.location.href,
       });
     } catch (error) {

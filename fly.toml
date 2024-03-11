@@ -12,6 +12,7 @@ primary_region = 'waw'
 
 [env]
   PORT = '8080'
+  CORS_ORIGIN = 'https://chat.olzhasar.com'
 
 [http_service]
   internal_port = 8080

@@ -9,6 +9,28 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	roomCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "room_count",
+		Help: "The number of active rooms",
+	})
+	clientCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "client_count",
+		Help: "The number of active clients",
+	})
+	messagesReceivedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "messages_received",
+		Help: "The number of messages received from all connections",
+	})
+	messagesBroadcastedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "messages_broadcasted",
+		Help: "The number of messages broadcasted to all connections",
+	})
 )
 
 const EMPTY_ROOM_TIMEOUT = 1 * time.Minute
@@ -111,9 +133,8 @@ func (h *Hub) broadcast(message Message) {
 
 func (h *Hub) handleRegister(client *Client, room *Room) {
 	room.clients = append(room.clients, client)
+	clientCount.Inc()
 	client.listen()
-	log.Println("client connected ")
-	log.Println("clients in the room: ", len(room.clients))
 }
 
 func (h *Hub) handleUnregister(client *Client, room *Room) {
@@ -133,8 +154,7 @@ func (h *Hub) handleUnregister(client *Client, room *Room) {
 
 	h.scheduleRoomTermination(room)
 
-	log.Println("client disconnected ", client.name)
-	log.Println("clients in the room: ", len(room.clients))
+	clientCount.Dec()
 }
 
 func (h *Hub) handleBroadcast(message Message) {
@@ -143,8 +163,11 @@ func (h *Hub) handleBroadcast(message Message) {
 	for _, client := range message.room.clients {
 		if client != message.author {
 			client.write(encoded)
+			messagesBroadcastedCount.Inc()
 		}
 	}
+
+	messagesReceivedCount.Inc()
 }
 
 func (h *Hub) run() {
@@ -185,7 +208,6 @@ func (h *Hub) listenClient(client *Client, room *Room) {
 
 		if msg.msgType == MESSAGE_TYPE_NAME {
 			client.setName(string(msg.content))
-			log.Println("Client set name to ", client.name)
 		}
 
 		if client.name == "" && msg.msgType != MESSAGE_TYPE_NAME {
@@ -214,10 +236,9 @@ func (h *Hub) CreateRoom() *Room {
 		}
 	}
 
-	log.Println("created room ", room.ID)
-	log.Println("rooms count: ", h.RoomCount())
-
 	h.scheduleRoomTermination(room)
+
+	roomCount.Inc()
 
 	return room
 }
@@ -236,7 +257,7 @@ func (h *Hub) scheduleRoomTermination(room *Room) {
 		if room.ClientCount() > 0 || h.rooms[room.ID] == nil {
 			return
 		}
-		log.Println("terminating room", room.ID)
 		delete(h.rooms, room.ID)
+		roomCount.Dec()
 	}()
 }

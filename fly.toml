@@ -25,5 +25,5 @@ primary_region = 'waw'
   size = 'shared-cpu-1x'
 
 [[ metrics ]]
-port = "2112"
-path = "/metrics"
+port = 2112
+path = "/"

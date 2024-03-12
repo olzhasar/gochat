@@ -22,9 +22,14 @@ Check out the [live application](https://chat.olzhasar.com/)
 - Tailwind CSS
 - DaisyUI
 
+## Requirements
+- Go 1.22
+- Node.js
+- npm
+
 ## Running the application
 1. Clone the repository
-2. Run `make run` to start the backend server
+2. Run `make run` inside the backend directory to start the backend server
 3. Navigate to the `frontend` directory and run `npm install` to install the dependencies
 4. Run `make run` inside the `frontend` directory to start the frontend server
 

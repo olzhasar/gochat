@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"net/http"
@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestMetrics(t *testing.T) {
-	server := NewMetricsServer(":2112")
+func TestServer(t *testing.T) {
+	server := NewServer(":2112")
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()

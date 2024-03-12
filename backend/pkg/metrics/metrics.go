@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,37 +9,37 @@ import (
 )
 
 var (
-	roomCount = promauto.NewGauge(prometheus.GaugeOpts{
+	RoomCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "room_count",
 		Help: "The number of active rooms",
 	})
-	clientCount = promauto.NewGauge(prometheus.GaugeOpts{
+	ClientCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "client_count",
 		Help: "The number of active clients",
 	})
-	messagesReceivedCount = promauto.NewCounter(prometheus.CounterOpts{
+	MessagesReceivedCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "messages_received",
 		Help: "The number of messages received from all connections",
 	})
-	messagesBroadcastedCount = promauto.NewCounter(prometheus.CounterOpts{
+	MessagesBroadcastedCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "messages_broadcasted",
 		Help: "The number of messages broadcasted to all connections",
 	})
 )
 
-type MetricsServer struct {
+type Server struct {
 	port string
 }
 
-func NewMetricsServer(port string) *MetricsServer {
-	return &MetricsServer{port: port}
+func NewServer(port string) *Server {
+	return &Server{port: port}
 }
 
-func (s *MetricsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	promhttp.Handler().ServeHTTP(w, r)
 }
 
-func (s *MetricsServer) Run() {
+func (s *Server) Run() {
 	go func() {
 		log.Println("Starting metrics server on port", s.port)
 		log.Fatal(http.ListenAndServe(":"+s.port, s))

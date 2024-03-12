@@ -190,9 +190,16 @@ const notifyStopTyping = () => {
       id="messageList"
       class="overflow-y-scroll flex-grow pr-2 space-y-2 no-scrollbar"
     >
-      <div v-for="msg in messages">
-        <MessageDiv :msg="msg" />
-      </div>
+      <TransitionGroup
+        tag="div"
+        enter-from-class="opacity-0 -translate-x-10"
+        enter-to-class="opacity-100 translate-x-0"
+        enter-active-class="duration-200 ease-in transform"
+      >
+        <div v-for="(msg, index) in messages" :key="index">
+          <MessageDiv :msg="msg" />
+        </div>
+      </TransitionGroup>
 
       <div v-if="personTyping" class="chat chat-start">
         <div class="opacity-60 chat-footer">

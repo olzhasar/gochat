@@ -1,5 +1,10 @@
-deploy:
+run:
+	npm run dev
+
+build:
 	npm run build
+
+deploy: build
 	netlify deploy --prod --dir=dist
 
-.PHONY: deploy
+.PHONY: deploy build run

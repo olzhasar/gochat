@@ -175,12 +175,13 @@ func (h *Hub) RoomCount() int {
 
 func (h *Hub) scheduleRoomTermination(room *Room) {
 	go func() {
-		time.Sleep(EMPTY_ROOM_TIMEOUT)
-		if room.ClientCount() > 0 || h.rooms[room.ID] == nil {
-			return
-		}
-		delete(h.rooms, room.ID)
-		metrics.RoomCount.Dec()
+		time.AfterFunc(EMPTY_ROOM_TIMEOUT, func() {
+			if room.ClientCount() > 0 || h.rooms[room.ID] == nil {
+				return
+			}
+			delete(h.rooms, room.ID)
+			metrics.RoomCount.Dec()
+		})
 	}()
 }
 

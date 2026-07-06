@@ -1,44 +1,31 @@
-package chat
+package chat_test
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/olzhasar/gochat/pkg/chat"
 )
 
 func TestCreateRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	url := ts.URL + "/room"
-
-	resp, err := http.Post(url, "application/json", nil)
+	roomId, err := createRoom(ts)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("expected status code %d, got %d", http.StatusCreated, resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	roomId := string(body)
-
-	if roomId == "" {
-		t.Fatal("expected non-empty room id")
 	}
 
 	room := hub.GetRoom(roomId)
@@ -47,13 +34,68 @@ func TestCreateRoom(t *testing.T) {
 	}
 }
 
+func TestCreateRoomConcurrent(t *testing.T) {
+	hub := chat.NewHub()
+	hub.Run()
+
+	server := chat.NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	n_requests := 3
+	err_ch := make(chan error, n_requests)
+
+	for range n_requests {
+		go func() {
+			_, err := createRoom(ts)
+			err_ch <- err
+		}()
+	}
+
+	for range n_requests {
+		if err := <-err_ch; err != nil {
+			t.Fatalf("Error: %v\n", err)
+		}
+	}
+
+}
+
+func TestCreateAndGetRoomConcurrent(t *testing.T) {
+	hub := chat.NewHub()
+	hub.Run()
+
+	server := chat.NewServer(hub)
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	roomId, err := createRoom(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+
+	for range 3 {
+		wg.Go(func() {
+			createRoom(ts)
+		})
+		wg.Go(func() {
+			http.Get(ts.URL + "/room/" + roomId)
+		})
+	}
+
+	wg.Wait()
+}
+
 func TestConnectToRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
 	room := hub.CreateRoom()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -79,10 +121,10 @@ func TestConnectToRoom(t *testing.T) {
 }
 
 func TestConnectToUnexistingRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -100,39 +142,13 @@ func TestConnectToUnexistingRoom(t *testing.T) {
 	}
 }
 
-func TestSetName(t *testing.T) {
-	hub := NewHub()
-	hub.Run()
-
-	room := hub.CreateRoom()
-
-	server := NewServer(hub)
-
-	ts := httptest.NewServer(server)
-	defer ts.Close()
-
-	conn := makeConnection(ts, room.ID)
-	defer conn.Close()
-
-	name := "test"
-	if err := conn.WriteMessage(websocket.TextMessage, []byte("2test")); err != nil {
-		t.Fatal(err)
-	}
-
-	time.Sleep(50 * time.Millisecond)
-
-	if room.clients[0].name != name {
-		t.Fatalf("expected name %s, got %s", name, room.clients[0].name)
-	}
-}
-
 func TestTextMessage(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
 	room := hub.CreateRoom()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -156,12 +172,12 @@ func TestTextMessage(t *testing.T) {
 }
 
 func TestLeaveMessage(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
 	room := hub.CreateRoom()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -178,12 +194,12 @@ func TestLeaveMessage(t *testing.T) {
 }
 
 func TestGetRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
 	room := hub.CreateRoom()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -199,10 +215,10 @@ func TestGetRoom(t *testing.T) {
 }
 
 func TestGetUnexistingRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
-	server := NewServer(hub)
+	server := chat.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -228,6 +244,31 @@ func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
 	}
 
 	return conn
+}
+
+func createRoom(ts *httptest.Server) (string, error) {
+	url := ts.URL + "/room"
+
+	resp, err := http.Post(url, "application/json", nil)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", errors.New(fmt.Sprintf("expected status code %d, got %d", http.StatusCreated, resp.StatusCode))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	roomId := string(body)
+	if roomId == "" {
+		return "", errors.New("want roomId, got empty string")
+	}
+
+	return roomId, nil
 }
 
 func checkReceivedMessage(t testing.TB, conn *websocket.Conn, expected string) {

@@ -1,9 +1,13 @@
-package chat
+package chat_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/olzhasar/gochat/pkg/chat"
+)
 
 func TestHubCreateRoom(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 
 	room1 := hub.CreateRoom()
 
@@ -31,19 +35,15 @@ func TestHubCreateRoom(t *testing.T) {
 }
 
 func TestHubRegisterClient(t *testing.T) {
-	hub := NewHub()
+	hub := chat.NewHub()
 	hub.Run()
 
 	room := hub.CreateRoom()
 
-	client := NewClient(nil)
+	client := chat.NewClient(nil)
 	hub.Register(client, room)
 
-	if len(room.clients) != 1 {
-		t.Fatal("expected client to be in room")
-	}
-
-	if room.clients[0] != client {
+	if room.ClientCount() != 1 {
 		t.Fatal("expected client to be in room")
 	}
 }

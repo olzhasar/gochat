@@ -1,13 +1,15 @@
-package metrics
+package metrics_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/olzhasar/gochat/pkg/metrics"
 )
 
 func TestServer(t *testing.T) {
-	server := NewServer(":2112")
+	server := metrics.NewServer(":2112")
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()

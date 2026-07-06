@@ -2,6 +2,7 @@ package chat
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,11 +13,14 @@ import (
 const EMPTY_ROOM_TIMEOUT = 1 * time.Minute
 
 type Room struct {
-	ID      string
-	clients []*Client
+	ID           string
+	clients      []*Client
+	clients_lock sync.RWMutex
 }
 
 func (r *Room) ClientCount() int {
+	r.clients_lock.RLock()
+	defer r.clients_lock.RUnlock()
 	return len(r.clients)
 }
 
@@ -34,6 +38,7 @@ type Hub struct {
 	unregisterChan chan Instruction
 	broadcastChan  chan Message
 	rooms          map[string]*Room
+	rooms_mut      sync.RWMutex
 }
 
 func NewHub() *Hub {
@@ -58,18 +63,23 @@ func (h *Hub) Broadcast(message Message) {
 }
 
 func (h *Hub) handleRegister(client *Client, room *Room) {
+	room.clients_lock.Lock()
 	room.clients = append(room.clients, client)
+	room.clients_lock.Unlock()
+
 	metrics.ClientCount.Inc()
 	client.listen()
 }
 
 func (h *Hub) handleUnregister(client *Client, room *Room) {
+	room.clients_lock.Lock()
 	for i, c := range room.clients {
 		if c == client {
 			room.clients = append(room.clients[:i], room.clients[i+1:]...)
 			break
 		}
 	}
+	room.clients_lock.Unlock()
 
 	if client.name != "" {
 		leaveMsg := NewMessage(client, room, MESSAGE_TYPE_LEAVE, nil)
@@ -149,6 +159,7 @@ func (h *Hub) ListenClient(client *Client, room *Room) {
 func (h *Hub) CreateRoom() *Room {
 	var room *Room
 
+	h.rooms_mut.Lock()
 	for {
 		id := generateID()
 		if h.rooms[id] == nil {
@@ -157,6 +168,7 @@ func (h *Hub) CreateRoom() *Room {
 			break
 		}
 	}
+	h.rooms_mut.Unlock()
 
 	h.scheduleRoomTermination(room)
 
@@ -166,10 +178,14 @@ func (h *Hub) CreateRoom() *Room {
 }
 
 func (h *Hub) GetRoom(id string) *Room {
+	h.rooms_mut.RLock()
+	defer h.rooms_mut.RUnlock()
 	return h.rooms[id]
 }
 
 func (h *Hub) RoomCount() int {
+	h.rooms_mut.RLock()
+	defer h.rooms_mut.RUnlock()
 	return len(h.rooms)
 }
 

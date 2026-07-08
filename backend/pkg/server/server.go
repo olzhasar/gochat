@@ -1,4 +1,4 @@
-package chat
+package server
 
 import (
 	"log"
@@ -6,12 +6,13 @@ import (
 	"os"
 
 	"github.com/gorilla/websocket"
+	"github.com/olzhasar/gochat/pkg/chat"
 )
 
 type Server struct {
 	mux             *http.ServeMux
 	upgrader        websocket.Upgrader
-	hub             *Hub
+	hub             *chat.Hub
 	corsAllowOrigin string
 }
 
@@ -62,7 +63,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := NewClient(conn)
+	client := chat.NewClient(conn)
 	s.hub.Register(client, room)
 
 	s.hub.ListenClient(client, room)
@@ -86,7 +87,7 @@ func (s *Server) configureRoutes() {
 	s.mux.HandleFunc("GET /ws/{room}", s.handleWS)
 }
 
-func NewServer(hub *Hub) *Server {
+func NewServer(hub *chat.Hub) *Server {
 	var corsAllowOrigin string
 	if corsAllowOrigin = os.Getenv("CORS_ORIGIN"); corsAllowOrigin == "" {
 		corsAllowOrigin = "*"

@@ -1,4 +1,4 @@
-package chat_test
+package server_test
 
 import (
 	"errors"
@@ -12,13 +12,14 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/olzhasar/gochat/pkg/chat"
+	"github.com/olzhasar/gochat/pkg/server"
 )
 
 func TestCreateRoom(t *testing.T) {
 	hub := chat.NewHub()
 	hub.Run()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -38,7 +39,7 @@ func TestCreateRoomConcurrent(t *testing.T) {
 	hub := chat.NewHub()
 	hub.Run()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -65,7 +66,7 @@ func TestCreateAndGetRoomConcurrent(t *testing.T) {
 	hub := chat.NewHub()
 	hub.Run()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -95,7 +96,7 @@ func TestConnectToRoom(t *testing.T) {
 
 	room := hub.CreateRoom()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -124,7 +125,7 @@ func TestConnectToUnexistingRoom(t *testing.T) {
 	hub := chat.NewHub()
 	hub.Run()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -148,7 +149,7 @@ func TestTextMessage(t *testing.T) {
 
 	room := hub.CreateRoom()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -177,7 +178,7 @@ func TestLeaveMessage(t *testing.T) {
 
 	room := hub.CreateRoom()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -199,7 +200,7 @@ func TestGetRoom(t *testing.T) {
 
 	room := hub.CreateRoom()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -218,7 +219,7 @@ func TestGetUnexistingRoom(t *testing.T) {
 	hub := chat.NewHub()
 	hub.Run()
 
-	server := chat.NewServer(hub)
+	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()

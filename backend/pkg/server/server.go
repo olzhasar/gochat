@@ -63,9 +63,8 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := chat.NewClient(conn)
+	client := s.hub.CreateClient(conn)
 
-	client.Run()
 	client.JoinRoom(room)
 }
 

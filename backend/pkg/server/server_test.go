@@ -115,7 +115,7 @@ func TestConnectToRoom(t *testing.T) {
 	}
 }
 
-func TestConnectToUnexistingRoom(t *testing.T) {
+func TestConnectToNonExistentRoom(t *testing.T) {
 	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)

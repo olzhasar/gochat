@@ -7,17 +7,23 @@ import (
 )
 
 type Client struct {
+	ID            string
 	name          string
 	conn          *websocket.Conn
 	room          *Room
 	broadcastChan chan []byte
 }
 
-func NewClient(conn *websocket.Conn) *Client {
+func newClient(ID string, conn *websocket.Conn) Client {
 	if conn == nil {
 		panic("no connection")
 	}
-	return &Client{conn: conn, broadcastChan: make(chan []byte)}
+
+	return Client{
+		ID:            ID,
+		conn:          conn,
+		broadcastChan: make(chan []byte),
+	}
 }
 
 func (c *Client) JoinRoom(room *Room) {
@@ -29,8 +35,8 @@ func (c *Client) JoinRoom(room *Room) {
 	c.room = room
 }
 
-// Send a message to this client. Does not block
-func (c *Client) Send(message []byte) {
+// send a message to this client. Does not block
+func (c *Client) send(message []byte) {
 	c.broadcastChan <- message
 }
 
@@ -44,8 +50,8 @@ func (c *Client) listenWS() {
 		if err != nil || messageType == websocket.CloseMessage {
 			if c.room != nil {
 				c.room.leave(c)
-				c.close()
 			}
+			c.close()
 			return
 		}
 
@@ -59,6 +65,7 @@ func (c *Client) listenWS() {
 			if c.room != nil {
 				c.room.leave(c)
 			}
+			c.close()
 			continue
 		}
 
@@ -76,11 +83,11 @@ func (c *Client) listenWS() {
 			continue
 		}
 
-		msg.room.Broadcast(msg.Encode())
+		msg.room.broadcast(msg.Encode())
 	}
 }
 
-func (c *Client) Run() {
+func (c *Client) run() {
 	go func() {
 		for msg := range c.broadcastChan {
 			c.conn.WriteMessage(websocket.TextMessage, msg)

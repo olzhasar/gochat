@@ -12,7 +12,7 @@ type Room struct {
 	broadcast_queue chan []byte
 }
 
-func NewRoom(ID string) Room {
+func newRoom(ID string) Room {
 	return Room{
 		ID:              ID,
 		clients:         make([]*Client, 0),
@@ -45,23 +45,23 @@ func (r *Room) leave(client *Client) {
 
 	if client.name != "" {
 		leaveMsg := NewMessage(client, r, MESSAGE_TYPE_LEAVE, nil)
-		r.Broadcast(leaveMsg.Encode())
+		r.broadcast(leaveMsg.Encode())
 	}
 }
 
 // broadcast to all clients inside the room, does not block
-func (r *Room) Broadcast(msg []byte) {
+func (r *Room) broadcast(msg []byte) {
 	if msg == nil {
 		panic("msg nil")
 	}
 	r.broadcast_queue <- msg
 }
 
-func (r *Room) Run() {
+func (r *Room) run() {
 	go func() {
 		for msg := range r.broadcast_queue {
 			for _, client := range r.clients {
-				client.Send(msg)
+				client.send(msg)
 			}
 		}
 	}()

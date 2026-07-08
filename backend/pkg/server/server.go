@@ -64,9 +64,9 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := chat.NewClient(conn)
-	s.hub.Register(client, room)
 
-	s.hub.ListenClient(client, room)
+	client.Run()
+	client.JoinRoom(room)
 }
 
 func (s *Server) setCORSPolicy(w http.ResponseWriter) {
@@ -88,6 +88,10 @@ func (s *Server) configureRoutes() {
 }
 
 func NewServer(hub *chat.Hub) *Server {
+	if hub == nil {
+		hub = chat.NewHub()
+	}
+
 	var corsAllowOrigin string
 	if corsAllowOrigin = os.Getenv("CORS_ORIGIN"); corsAllowOrigin == "" {
 		corsAllowOrigin = "*"

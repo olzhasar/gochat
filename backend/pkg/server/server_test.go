@@ -16,10 +16,7 @@ import (
 )
 
 func TestCreateRoom(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -29,17 +26,19 @@ func TestCreateRoom(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	room := hub.GetRoom(roomId)
-	if room == nil {
-		t.Fatal("expected room to be created")
+	wantStatus := http.StatusNoContent
+	resp, err := http.Get(ts.URL + "/room/" + roomId)
+	if err != nil {
+		t.Fatalf("want %d, got error: %s", wantStatus, err)
+	}
+
+	if resp.StatusCode != wantStatus {
+		t.Fatalf("want %d, got %d", wantStatus, resp.StatusCode)
 	}
 }
 
 func TestCreateRoomConcurrent(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -63,10 +62,7 @@ func TestCreateRoomConcurrent(t *testing.T) {
 }
 
 func TestCreateAndGetRoomConcurrent(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -92,11 +88,9 @@ func TestCreateAndGetRoomConcurrent(t *testing.T) {
 
 func TestConnectToRoom(t *testing.T) {
 	hub := chat.NewHub()
-	hub.Run()
+	server := server.NewServer(hub)
 
 	room := hub.CreateRoom()
-
-	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -122,10 +116,7 @@ func TestConnectToRoom(t *testing.T) {
 }
 
 func TestConnectToUnexistingRoom(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -145,11 +136,9 @@ func TestConnectToUnexistingRoom(t *testing.T) {
 
 func TestTextMessage(t *testing.T) {
 	hub := chat.NewHub()
-	hub.Run()
+	server := server.NewServer(hub)
 
 	room := hub.CreateRoom()
-
-	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -174,11 +163,9 @@ func TestTextMessage(t *testing.T) {
 
 func TestLeaveMessage(t *testing.T) {
 	hub := chat.NewHub()
-	hub.Run()
+	server := server.NewServer(hub)
 
 	room := hub.CreateRoom()
-
-	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -196,11 +183,9 @@ func TestLeaveMessage(t *testing.T) {
 
 func TestGetRoom(t *testing.T) {
 	hub := chat.NewHub()
-	hub.Run()
+	server := server.NewServer(hub)
 
 	room := hub.CreateRoom()
-
-	server := server.NewServer(hub)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -216,10 +201,7 @@ func TestGetRoom(t *testing.T) {
 }
 
 func TestGetUnexistingRoom(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -256,7 +238,7 @@ func createRoom(ts *httptest.Server) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusCreated {
-		return "", errors.New(fmt.Sprintf("expected status code %d, got %d", http.StatusCreated, resp.StatusCode))
+		return "", fmt.Errorf("expected status code %d, got %d", http.StatusCreated, resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)

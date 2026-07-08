@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/olzhasar/gochat/pkg/chat"
 	"github.com/olzhasar/gochat/pkg/metrics"
 	"github.com/olzhasar/gochat/pkg/server"
 	"os"
@@ -16,9 +15,6 @@ func main() {
 	metricsServer := metrics.NewServer("2112")
 	metricsServer.Run()
 
-	hub := chat.NewHub()
-	hub.Run()
-
-	server := server.NewServer(hub)
+	server := server.NewServer(nil)
 	server.Run(port)
 }

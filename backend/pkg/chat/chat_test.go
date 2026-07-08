@@ -34,16 +34,10 @@ func TestHubCreateRoom(t *testing.T) {
 	}
 }
 
-func TestHubRegisterClient(t *testing.T) {
-	hub := chat.NewHub()
-	hub.Run()
-
-	room := hub.CreateRoom()
-
-	client := chat.NewClient(nil)
-	hub.Register(client, room)
-
-	if room.ClientCount() != 1 {
-		t.Fatal("expected client to be in room")
-	}
-}
+// func TestHubEmptyRoom(t *testing.T) {
+// 	hub := chat.NewHub()
+//
+// 	room := hub.CreateRoom()
+//
+// 	client1 := chat.NewClient()
+// }

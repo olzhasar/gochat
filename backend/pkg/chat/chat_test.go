@@ -33,11 +33,3 @@ func TestHubCreateRoom(t *testing.T) {
 		t.Fatal("expected hub to have 2 rooms")
 	}
 }
-
-// func TestHubEmptyRoom(t *testing.T) {
-// 	hub := chat.NewHub()
-//
-// 	room := hub.CreateRoom()
-//
-// 	client1 := chat.NewClient()
-// }

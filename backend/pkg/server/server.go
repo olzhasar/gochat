@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/olzhasar/gochat/pkg/chat"
+	"github.com/olzhasar/gochat/pkg/protocol"
 )
 
 type Server struct {
@@ -63,9 +64,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := s.hub.CreateClient(conn)
-
+	client := s.hub.CreateClient()
 	client.JoinRoom(room)
+
+	s.listenWS(client, conn)
+
 }
 
 func (s *Server) setCORSPolicy(w http.ResponseWriter) {
@@ -122,4 +125,38 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Run(port string) {
 	log.Println("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(":"+port, s))
+}
+
+func (s *Server) listenWS(client *chat.Client, conn *websocket.Conn) {
+	go func() {
+		for {
+			messageType, message, err := conn.ReadMessage()
+			if err != nil || messageType == websocket.CloseMessage {
+				s.hub.TerminateClient(client)
+				return
+			}
+
+			if messageType != websocket.TextMessage {
+				continue
+			}
+
+			msg, err := protocol.Decode(message)
+			if err != nil {
+				s.hub.TerminateClient(client)
+				return
+			}
+
+			err = s.hub.Dispatch(client, msg)
+			if err != nil {
+				s.hub.TerminateClient(client)
+				return
+			}
+		}
+	}()
+
+	go func() {
+		for msg := range client.WriteQ {
+			conn.WriteMessage(websocket.TextMessage, msg.Encode())
+		}
+	}()
 }

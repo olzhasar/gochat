@@ -1,28 +1,22 @@
 package chat
 
 import (
-	"log/slog"
+	"errors"
 
-	"github.com/gorilla/websocket"
+	"github.com/olzhasar/gochat/pkg/protocol"
 )
 
 type Client struct {
-	ID            string
-	name          string
-	conn          *websocket.Conn
-	room          *Room
-	broadcastChan chan []byte
+	id     string
+	name   string
+	room   *Room
+	WriteQ chan protocol.Message
 }
 
-func newClient(ID string, conn *websocket.Conn) Client {
-	if conn == nil {
-		panic("no connection")
-	}
-
+func newClient(ID string) Client {
 	return Client{
-		ID:            ID,
-		conn:          conn,
-		broadcastChan: make(chan []byte),
+		id:     ID,
+		WriteQ: make(chan protocol.Message),
 	}
 }
 
@@ -35,72 +29,37 @@ func (c *Client) JoinRoom(room *Room) {
 	c.room = room
 }
 
-// send a message to this client. Does not block
-func (c *Client) send(message []byte) {
-	c.broadcastChan <- message
+// enqueue a message for sending to this client. Does not block
+func (c *Client) enqueue(payload protocol.Message) {
+	c.WriteQ <- payload
 }
 
 func (c *Client) setName(name string) {
 	c.name = name
 }
 
-func (c *Client) listenWS() {
-	for {
-		messageType, message, err := c.conn.ReadMessage()
-		if err != nil || messageType == websocket.CloseMessage {
-			if c.room != nil {
-				c.room.leave(c)
-			}
-			c.close()
-			return
+func (c *Client) receive(room *Room, payload protocol.Message) error {
+	switch payload.Type {
+	case protocol.MessageTypeJoin:
+		if c.name != "" {
+			return errors.New("Name already set")
 		}
 
-		if messageType != websocket.TextMessage {
-			continue
+		if payload.ClientName == "" {
+			return errors.New("Required field Name is missing")
 		}
+		c.setName(payload.ClientName)
 
-		msgType, content, err := parseMessageData(message)
-		if err != nil {
-			slog.Error("Invalid message received. Disconnecting client.")
-			if c.room != nil {
-				c.room.leave(c)
-			}
-			c.close()
-			continue
+	default:
+		if c.name == "" {
+			return errors.New("Name has not been set")
 		}
-
-		msg := NewMessage(c, c.room, msgType, content)
-
-		if msg.msgType == MESSAGE_TYPE_NAME {
-			c.setName(string(msg.content))
-		}
-
-		if c.name == "" && msg.msgType != MESSAGE_TYPE_NAME {
-			slog.Info("Client name not set. Disconnecting client.")
-			if c.room != nil {
-				c.room.leave(c)
-			}
-			continue
-		}
-
-		msg.room.broadcast(msg.Encode())
 	}
-}
 
-func (c *Client) run() {
-	go func() {
-		for msg := range c.broadcastChan {
-			c.conn.WriteMessage(websocket.TextMessage, msg)
-		}
-	}()
-
-	go c.listenWS()
+	room.broadcast(payload)
+	return nil
 }
 
 func (c *Client) close() {
-	close(c.broadcastChan)
-	err := c.conn.Close()
-	if err != nil {
-		slog.Error("Failed to close connection")
-	}
+	close(c.WriteQ)
 }

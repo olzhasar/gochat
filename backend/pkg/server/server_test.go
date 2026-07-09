@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/olzhasar/gochat/pkg/chat"
+	"github.com/olzhasar/gochat/pkg/protocol"
 	"github.com/olzhasar/gochat/pkg/server"
 )
 
@@ -21,13 +22,13 @@ func TestCreateRoom(t *testing.T) {
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	roomId, err := createRoom(ts)
+	roomID, err := createRoom(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wantStatus := http.StatusNoContent
-	resp, err := http.Get(ts.URL + "/room/" + roomId)
+	resp, err := http.Get(ts.URL + "/room/" + roomID)
 	if err != nil {
 		t.Fatalf("want %d, got error: %s", wantStatus, err)
 	}
@@ -67,7 +68,7 @@ func TestCreateAndGetRoomConcurrent(t *testing.T) {
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	roomId, err := createRoom(ts)
+	roomID, err := createRoom(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestCreateAndGetRoomConcurrent(t *testing.T) {
 			createRoom(ts)
 		})
 		wg.Go(func() {
-			http.Get(ts.URL + "/room/" + roomId)
+			http.Get(ts.URL + "/room/" + roomID)
 		})
 	}
 
@@ -148,17 +149,36 @@ func TestTextMessage(t *testing.T) {
 	defer conn1.Close()
 	defer conn2.Close()
 
-	conn1.WriteMessage(websocket.TextMessage, []byte("2test"))
+	msg1 := protocol.Message{
+		Type:       protocol.MessageTypeJoin,
+		RoomID:     room.ID,
+		ClientID:   "123",
+		ClientName: "test",
+	}
 
-	message := []byte("1hello")
-	if err := conn1.WriteMessage(websocket.TextMessage, message); err != nil {
+	msg2 := protocol.Message{
+		Type:       protocol.MessageTypeText,
+		RoomID:     room.ID,
+		ClientID:   "123",
+		ClientName: "test",
+		Content:    "asflkj",
+	}
+
+	encoded1 := msg1.Encode()
+	encoded2 := msg2.Encode()
+
+	if err := conn1.WriteMessage(websocket.TextMessage, encoded1); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := conn1.WriteMessage(websocket.TextMessage, encoded2); err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	checkReceivedMessage(t, conn2, "2test|")
-	checkReceivedMessage(t, conn2, "1test|hello")
+	checkReceivedMessage(t, conn2, encoded1)
+	checkReceivedMessage(t, conn2, encoded2)
 }
 
 func TestLeaveMessage(t *testing.T) {
@@ -174,11 +194,28 @@ func TestLeaveMessage(t *testing.T) {
 	defer conn1.Close()
 
 	conn2 := makeConnection(ts, room.ID)
-	conn2.WriteMessage(websocket.TextMessage, []byte("2leaver"))
+
+	msg1 := protocol.Message{
+		Type:       protocol.MessageTypeJoin,
+		ClientID:   "123",
+		ClientName: "Vincent Vega",
+	}
+
+	msg2 := protocol.Message{
+		Type:     protocol.MessageTypeLeave,
+		ClientID: "123",
+		RoomID:   room.ID,
+	}
+
+	encoded1 := msg1.Encode()
+	encoded2 := msg2.Encode()
+
+	conn2.WriteMessage(websocket.TextMessage, encoded1)
+	conn2.WriteMessage(websocket.TextMessage, encoded2)
 	conn2.Close()
 
-	checkReceivedMessage(t, conn1, "2leaver|")
-	checkReceivedMessage(t, conn1, "3leaver|")
+	checkReceivedMessage(t, conn1, encoded1)
+	checkReceivedMessage(t, conn1, encoded2)
 }
 
 func TestGetRoom(t *testing.T) {
@@ -216,9 +253,9 @@ func TestGetUnexistingRoom(t *testing.T) {
 	}
 }
 
-func makeConnection(ts *httptest.Server, roomId string) *websocket.Conn {
+func makeConnection(ts *httptest.Server, roomID string) *websocket.Conn {
 	dialer := websocket.Dialer{}
-	url := "ws" + ts.URL[4:] + "/ws/" + roomId
+	url := "ws" + ts.URL[4:] + "/ws/" + roomID
 
 	conn, _, err := dialer.Dial(url, nil)
 
@@ -246,25 +283,25 @@ func createRoom(ts *httptest.Server) (string, error) {
 		return "", err
 	}
 
-	roomId := string(body)
-	if roomId == "" {
-		return "", errors.New("want roomId, got empty string")
+	roomID := string(body)
+	if roomID == "" {
+		return "", errors.New("want roomID, got empty string")
 	}
 
-	return roomId, nil
+	return roomID, nil
 }
 
-func checkReceivedMessage(t testing.TB, conn *websocket.Conn, expected string) {
+func checkReceivedMessage(t testing.TB, conn *websocket.Conn, want []byte) {
 	t.Helper()
 
 	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 
-	_, received, err := conn.ReadMessage()
+	_, got, err := conn.ReadMessage()
 	if err != nil {
-		t.Fatalf("expected message %s, got error %s", expected, err)
+		t.Fatalf("expected message %s, got error %s", want, err)
 	}
 
-	if string(received) != expected {
-		t.Fatalf("expected message %s, got %s", expected, received)
+	if string(got) != string(want) {
+		t.Fatalf("expected message %s, got %s", want, got)
 	}
 }

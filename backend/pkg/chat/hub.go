@@ -1,21 +1,22 @@
 package chat
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/olzhasar/gochat/pkg/metrics"
+	"github.com/olzhasar/gochat/pkg/protocol"
 )
 
 const EMPTY_ROOM_TIMEOUT = 1 * time.Minute
 
 type Hub struct {
 	rooms        map[string]*Room
-	rooms_lock   sync.RWMutex
+	roomsLock   sync.RWMutex
 	clients      map[string]*Client
-	clients_lock sync.Mutex
+	clientsLock sync.Mutex
 }
 
 func NewHub() *Hub {
@@ -29,7 +30,7 @@ func NewHub() *Hub {
 func (h *Hub) CreateRoom() *Room {
 	var room Room
 
-	h.rooms_lock.Lock()
+	h.roomsLock.Lock()
 	for {
 		id := generateID()
 		if _, ok := h.rooms[id]; !ok {
@@ -38,7 +39,7 @@ func (h *Hub) CreateRoom() *Room {
 			break
 		}
 	}
-	h.rooms_lock.Unlock()
+	h.roomsLock.Unlock()
 
 	room.run()
 
@@ -47,21 +48,19 @@ func (h *Hub) CreateRoom() *Room {
 	return &room
 }
 
-func (h *Hub) CreateClient(conn *websocket.Conn) *Client {
+func (h *Hub) CreateClient() *Client {
 	var client Client
 
-	h.clients_lock.Lock()
+	h.clientsLock.Lock()
 	for {
 		id := generateID()
 		if _, ok := h.rooms[id]; !ok {
-			client = newClient(id, conn)
+			client = newClient(id)
 			h.clients[id] = &client
 			break
 		}
 	}
-	h.clients_lock.Unlock()
-
-	client.run()
+	h.clientsLock.Unlock()
 
 	metrics.ClientCount.Inc()
 
@@ -69,15 +68,35 @@ func (h *Hub) CreateClient(conn *websocket.Conn) *Client {
 }
 
 func (h *Hub) GetRoom(id string) *Room {
-	h.rooms_lock.RLock()
-	defer h.rooms_lock.RUnlock()
+	h.roomsLock.RLock()
+	defer h.roomsLock.RUnlock()
 	return h.rooms[id]
 }
 
 func (h *Hub) RoomCount() int {
-	h.rooms_lock.RLock()
-	defer h.rooms_lock.RUnlock()
+	h.roomsLock.RLock()
+	defer h.roomsLock.RUnlock()
 	return len(h.rooms)
+}
+
+func (h *Hub) TerminateClient(client *Client) {
+	if client.room != nil {
+		client.room.leave(client)
+	}
+	client.close()
+
+	h.clientsLock.Lock()
+	delete(h.clients, client.id)
+	h.clientsLock.Unlock()
+}
+
+func (h *Hub) Dispatch(client *Client, msg protocol.Message) error {
+	room := h.GetRoom(client.room.ID) // FIXME: should read from msg
+	if room == nil {
+		return errors.New("Room not found")
+	}
+
+	return client.receive(room, msg)
 }
 
 func generateID() string {

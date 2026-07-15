@@ -90,7 +90,7 @@ func (h *Hub) TerminateClient(client *Client) {
 	h.clientsLock.Unlock()
 }
 
-func (h *Hub) Dispatch(client *Client, msg protocol.Message) error {
+func (h *Hub) Dispatch(client *Client, msg *protocol.Message) error {
 	room := h.GetRoom(client.room.ID) // FIXME: should read from msg
 	if room == nil {
 		return errors.New("Room not found")

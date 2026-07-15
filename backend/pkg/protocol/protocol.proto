@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package gochat;
+
+option go_package = "github.com/olzhasar/gochat/pkg/protocol";
+
+enum MessageType {
+  MSG_TEXT = 0;
+  MSG_JOIN = 1;
+  MSG_LEAVE = 2;
+  MSG_TYPING = 3;
+  MSG_STOP_TYPING = 4;
+}
+
+message Message {
+  MessageType type = 1;
+  string RoomID = 2;
+  string AuthorID = 3;
+  string AuthorName = 4;
+  string Content = 5;
+}

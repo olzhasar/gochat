@@ -149,19 +149,18 @@ func TestTextMessage(t *testing.T) {
 	defer conn1.Close()
 	defer conn2.Close()
 
+	name := "test"
+
 	msg1 := protocol.Message{
-		Type:       protocol.MessageTypeJoin,
-		RoomID:     room.ID,
-		ClientID:   "123",
-		ClientName: "test",
+		Type:    protocol.MessageType_MSG_JOIN,
+		RoomID:  room.ID,
+		Content: name,
 	}
 
 	msg2 := protocol.Message{
-		Type:       protocol.MessageTypeText,
-		RoomID:     room.ID,
-		ClientID:   "123",
-		ClientName: "test",
-		Content:    "asflkj",
+		Type:    protocol.MessageType_MSG_TEXT,
+		RoomID:  room.ID,
+		Content: "foo",
 	}
 
 	encoded1 := msg1.Encode()
@@ -177,8 +176,14 @@ func TestTextMessage(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	checkReceivedMessage(t, conn2, encoded1)
-	checkReceivedMessage(t, conn2, encoded2)
+	got1 := receiveMessage(t, conn2)
+	assertMessageType(t, got1, protocol.MessageType_MSG_JOIN)
+	assertMessageAuthorName(t, got1, name)
+
+	got2 := receiveMessage(t, conn2)
+	assertMessageType(t, got2, protocol.MessageType_MSG_TEXT)
+	assertMessageAuthorName(t, got2, name)
+	assertMessageContent(t, got2, "foo")
 }
 
 func TestLeaveMessage(t *testing.T) {
@@ -195,16 +200,16 @@ func TestLeaveMessage(t *testing.T) {
 
 	conn2 := makeConnection(ts, room.ID)
 
+	name := "Vincent Vega"
+
 	msg1 := protocol.Message{
-		Type:       protocol.MessageTypeJoin,
-		ClientID:   "123",
-		ClientName: "Vincent Vega",
+		Type:    protocol.MessageType_MSG_JOIN,
+		Content: name,
 	}
 
 	msg2 := protocol.Message{
-		Type:     protocol.MessageTypeLeave,
-		ClientID: "123",
-		RoomID:   room.ID,
+		Type:   protocol.MessageType_MSG_LEAVE,
+		RoomID: room.ID,
 	}
 
 	encoded1 := msg1.Encode()
@@ -214,8 +219,13 @@ func TestLeaveMessage(t *testing.T) {
 	conn2.WriteMessage(websocket.TextMessage, encoded2)
 	conn2.Close()
 
-	checkReceivedMessage(t, conn1, encoded1)
-	checkReceivedMessage(t, conn1, encoded2)
+	got1 := receiveMessage(t, conn1)
+	assertMessageType(t, got1, protocol.MessageType_MSG_JOIN)
+	assertMessageAuthorName(t, got1, name)
+
+	got2 := receiveMessage(t, conn1)
+	assertMessageType(t, got2, protocol.MessageType_MSG_LEAVE)
+	assertMessageAuthorName(t, got2, name)
 }
 
 func TestGetRoom(t *testing.T) {
@@ -291,17 +301,45 @@ func createRoom(ts *httptest.Server) (string, error) {
 	return roomID, nil
 }
 
-func checkReceivedMessage(t testing.TB, conn *websocket.Conn, want []byte) {
+func receiveMessage(t testing.TB, conn *websocket.Conn) *protocol.Message {
 	t.Helper()
 
 	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 
-	_, got, err := conn.ReadMessage()
+	wsType, got, err := conn.ReadMessage()
 	if err != nil {
-		t.Fatalf("expected message %s, got error %s", want, err)
+		t.Fatal(err)
 	}
 
-	if string(got) != string(want) {
-		t.Fatalf("expected message %s, got %s", want, got)
+	if wsType != websocket.TextMessage {
+		t.Fatalf("unexpected ws message type: %d", wsType)
+	}
+
+	msg, err := protocol.Decode(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return msg
+}
+
+func assertMessageAuthorName(t testing.TB, msg *protocol.Message, want string) {
+	t.Helper()
+	if msg.AuthorName != want {
+		t.Fatalf("want name %s, got %s\n", want, msg.AuthorName)
+	}
+}
+
+func assertMessageType(t testing.TB, msg *protocol.Message, want protocol.MessageType) {
+	t.Helper()
+	if msg.Type != want {
+		t.Fatalf("want type %s, got %s\n", want, msg.Type)
+	}
+}
+
+func assertMessageContent(t testing.TB, msg *protocol.Message, want string) {
+	t.Helper()
+	if msg.Content != want {
+		t.Fatalf("want content %s, got %s\n", want, msg.Content)
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/olzhasar/gochat/pkg/protocol"
+	"google.golang.org/protobuf/proto"
 )
 
 func BenchmarkEncode(b *testing.B) {
@@ -27,7 +28,7 @@ func BenchmarkDecode(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	if got != msg {
+	if !proto.Equal(got, msg) {
 		b.Fatal("decoded message does not match the original")
 	}
 
@@ -38,7 +39,7 @@ func BenchmarkDecode(b *testing.B) {
 	}
 }
 
-func makeMessage(tb testing.TB) protocol.Message {
+func makeMessage(tb testing.TB) *protocol.Message {
 	RoomID, err := uuid.NewUUID()
 	if err != nil {
 		tb.Fatal(err)
@@ -49,11 +50,11 @@ func makeMessage(tb testing.TB) protocol.Message {
 		tb.Fatal(err)
 	}
 
-	return protocol.Message{
-		Type:       protocol.MessageTypeText,
+	return &protocol.Message{
+		Type:       protocol.MessageType_MSG_TEXT,
 		RoomID:     RoomID.String(),
-		ClientID:   ClientID.String(),
-		ClientName: "foo",
+		AuthorID:   ClientID.String(),
+		AuthorName: "foo",
 		Content:    strings.Repeat("qwerty123", 32),
 	}
 }

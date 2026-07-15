@@ -2,36 +2,16 @@ package protocol
 
 import (
 	"errors"
-	"github.com/ugorji/go/codec"
-)
 
-type MessageType int
-
-const (
-	MessageTypeText MessageType = iota
-	MessageTypeJoin
-	MessageTypeLeave
-	MessageTypeStartTyping
-	MessageTypeStopTyping
+	"google.golang.org/protobuf/proto"
 )
 
 func (t MessageType) IsValid() bool {
-	return t >= MessageTypeText && t <= MessageTypeStopTyping
-}
-
-type Message struct {
-	Type       MessageType
-	RoomID     string
-	ClientID   string
-	ClientName string
-	Content    string
+	return t >= MessageType_MSG_TEXT && t <= MessageType_MSG_STOP_TYPING
 }
 
 func (s *Message) Encode() []byte {
-	var payload []byte
-	var mh codec.MsgpackHandle
-	encoder := codec.NewEncoderBytes(&payload, &mh)
-	err := encoder.Encode(s)
+	payload, err := proto.Marshal(s)
 	if err != nil {
 		panic(err)
 	}
@@ -39,19 +19,17 @@ func (s *Message) Encode() []byte {
 	return payload
 }
 
-func Decode(payload []byte) (Message, error) {
+func Decode(payload []byte) (*Message, error) {
 	var msg Message
-	var mh codec.MsgpackHandle
-	decoder := codec.NewDecoderBytes(payload, &mh)
-	err := decoder.Decode(&msg)
+	err := proto.Unmarshal(payload, &msg)
 
 	if err != nil {
-		return msg, err
+		return nil, err
 	}
 
 	if !msg.Type.IsValid() {
-		return msg, errors.New("Invalid msg")
+		return nil, errors.New("Invalid msg")
 	}
 
-	return msg, err
+	return &msg, err
 }

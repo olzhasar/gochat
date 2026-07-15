@@ -11,14 +11,14 @@ type Room struct {
 	ID          string
 	clients     []*Client
 	clientsLock sync.RWMutex
-	broadcastQ  chan protocol.Message
+	broadcastQ  chan *protocol.Message
 }
 
 func newRoom(ID string) Room {
 	return Room{
 		ID:         ID,
 		clients:    make([]*Client, 0),
-		broadcastQ: make(chan protocol.Message),
+		broadcastQ: make(chan *protocol.Message),
 	}
 }
 
@@ -46,14 +46,14 @@ func (r *Room) leave(client *Client) {
 	r.clientsLock.Unlock()
 
 	if client.name != "" {
-		leaveMsg := protocol.Message{Type: protocol.MessageTypeLeave, ClientID: client.id, RoomID: r.ID}
+		leaveMsg := client.composeMessage(protocol.MessageType_MSG_LEAVE, r.ID, "")
 		r.broadcast(leaveMsg)
 	}
 }
 
 // broadcast to all clients inside the room, does not block
-func (r *Room) broadcast(payload protocol.Message) {
-	r.broadcastQ <- payload
+func (r *Room) broadcast(msg *protocol.Message) {
+	r.broadcastQ <- msg
 }
 
 func (r *Room) run() {

@@ -10,13 +10,13 @@ type Client struct {
 	id     string
 	name   string
 	room   *Room
-	WriteQ chan protocol.Message
+	WriteQ chan *protocol.Message
 }
 
 func newClient(ID string) Client {
 	return Client{
 		id:     ID,
-		WriteQ: make(chan protocol.Message),
+		WriteQ: make(chan *protocol.Message),
 	}
 }
 
@@ -30,25 +30,40 @@ func (c *Client) JoinRoom(room *Room) {
 }
 
 // enqueue a message for sending to this client. Does not block
-func (c *Client) enqueue(payload protocol.Message) {
-	c.WriteQ <- payload
+func (c *Client) enqueue(msg *protocol.Message) {
+	c.WriteQ <- msg
 }
 
 func (c *Client) setName(name string) {
 	c.name = name
 }
 
-func (c *Client) receive(room *Room, payload protocol.Message) error {
-	switch payload.Type {
-	case protocol.MessageTypeJoin:
+func (c *Client) composeMessage(msgType protocol.MessageType, roomID string, content string) *protocol.Message {
+	return &protocol.Message{
+		Type:       msgType,
+		AuthorID:   c.id,
+		AuthorName: c.name,
+		RoomID:     roomID,
+		Content:    content,
+	}
+}
+
+func (c *Client) addMsgIdentity(msg *protocol.Message) {
+	msg.AuthorID = c.id
+	msg.AuthorName = c.name
+}
+
+func (c *Client) receive(room *Room, msg *protocol.Message) error {
+	switch msg.Type {
+	case protocol.MessageType_MSG_JOIN:
 		if c.name != "" {
 			return errors.New("Name already set")
 		}
 
-		if payload.ClientName == "" {
+		if msg.Content == "" {
 			return errors.New("Required field Name is missing")
 		}
-		c.setName(payload.ClientName)
+		c.setName(msg.Content)
 
 	default:
 		if c.name == "" {
@@ -56,7 +71,9 @@ func (c *Client) receive(room *Room, payload protocol.Message) error {
 		}
 	}
 
-	room.broadcast(payload)
+	c.addMsgIdentity(msg)
+
+	room.broadcast(msg)
 	return nil
 }
 
